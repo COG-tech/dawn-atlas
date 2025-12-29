@@ -1,0 +1,998 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dawn Galaxy Atlas</title>
+
+<!-- Online QR version: load libs from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+<style>
+  :root{
+    --bg0:#03040a;
+    --bg1:#060a16;
+    --panel:#0b1326cc;
+    --panel2:#0a1020e6;
+    --stroke:#243b53;
+    --muted:#9fb3c8;
+    --text:#e8ecf1;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    color:var(--text);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:
+      radial-gradient(1200px 800px at 30% 25%, rgba(50,90,255,.22), transparent 60%),
+      radial-gradient(900px 650px at 70% 40%, rgba(130,70,255,.16), transparent 55%),
+      radial-gradient(1100px 900px at 50% 80%, rgba(0,180,255,.10), transparent 65%),
+      linear-gradient(180deg, var(--bg0), var(--bg1));
+    overflow:hidden;
+  }
+  .stars::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      radial-gradient(2px 2px at 10% 20%, rgba(255,255,255,.55) 40%, transparent 55%),
+      radial-gradient(1px 1px at 25% 65%, rgba(255,255,255,.45) 40%, transparent 55%),
+      radial-gradient(1.5px 1.5px at 65% 35%, rgba(255,255,255,.40) 40%, transparent 55%),
+      radial-gradient(1px 1px at 80% 70%, rgba(255,255,255,.35) 40%, transparent 55%),
+      radial-gradient(2px 2px at 90% 25%, rgba(255,255,255,.30) 40%, transparent 55%),
+      radial-gradient(1px 1px at 35% 30%, rgba(255,255,255,.25) 40%, transparent 55%),
+      radial-gradient(1.5px 1.5px at 50% 55%, rgba(255,255,255,.22) 40%, transparent 55%);
+    opacity:.55;
+    pointer-events:none;
+    filter: blur(.2px);
+  }
+
+  .app{
+    position:fixed; inset:0;
+    display:grid;
+    grid-template-columns: 1fr 360px;
+    grid-template-rows: 56px 1fr;
+  }
+
+  header{
+    grid-column:1 / -1;
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px;
+    background:linear-gradient(180deg, rgba(12,20,40,.92), rgba(9,14,28,.86));
+    border-bottom:1px solid var(--stroke);
+    backdrop-filter: blur(6px);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; min-width: 250px; }
+  .logo{
+    width:26px; height:26px; border-radius:8px;
+    background:linear-gradient(135deg, rgba(90,169,255,.9), rgba(140,110,255,.85));
+    box-shadow: 0 0 18px rgba(90,169,255,.25);
+  }
+  .title{ font-weight:700; letter-spacing:.3px; }
+  .pill{
+    font-size:12px; color:var(--muted);
+    padding:4px 8px; border:1px solid var(--stroke);
+    border-radius:999px; background:rgba(7,12,22,.55);
+  }
+
+  .btn{
+    font-size:13px;
+    padding:7px 10px;
+    border:1px solid var(--stroke);
+    border-radius:10px;
+    background:rgba(10,18,34,.72);
+    color:var(--text);
+    cursor:pointer;
+    user-select:none;
+  }
+  .btn:hover{ border-color:#33557a; }
+  .btn.active{ background:rgba(25,49,84,.85); }
+
+  .spacer{ flex:1; }
+  .search{
+    display:flex; align-items:center; gap:8px;
+    border:1px solid var(--stroke);
+    border-radius:999px;
+    padding:6px 10px;
+    background:rgba(8,14,26,.62);
+    min-width: 340px;
+  }
+  .search input{
+    border:none; outline:none;
+    background:transparent;
+    color:var(--text);
+    width:100%;
+    font-size:13px;
+  }
+  .hint{ font-size:12px; color:var(--muted); white-space:nowrap; }
+
+  #plot{ grid-column:1; grid-row:2; width:100%; height:100%; }
+
+  aside{
+    grid-column:2; grid-row:2;
+    border-left:1px solid var(--stroke);
+    background:linear-gradient(180deg, rgba(8,12,24,.78), rgba(6,10,20,.86));
+    backdrop-filter: blur(6px);
+    padding:12px;
+    overflow:auto;
+  }
+  .card{
+    border:1px solid var(--stroke);
+    border-radius:14px;
+    background:rgba(7,12,22,.45);
+    padding:12px;
+    margin-bottom:12px;
+  }
+  .card h3{ margin:0 0 8px 0; font-size:13px; color:#cfe3ff; letter-spacing:.2px; }
+  .sub{ font-size:12px; color:var(--muted); margin-top:-2px; margin-bottom:8px; }
+
+  .previewWrap{ display:flex; gap:10px; align-items:flex-start; }
+  canvas#preview{
+    width:86px; height:86px;
+    border-radius:16px;
+    border:1px solid #2a3f5d;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.08), rgba(0,0,0,.22));
+    box-shadow: inset 0 0 28px rgba(0,0,0,.55);
+    flex:0 0 auto;
+  }
+  .kvs{ display:grid; grid-template-columns: 1fr; gap:6px; width:100%; }
+  .kv{
+    display:flex; justify-content:space-between; gap:12px;
+    font-size:12px;
+    border-bottom:1px dashed rgba(36,59,83,.55);
+    padding-bottom:6px;
+  }
+  .kv:last-child{ border-bottom:none; padding-bottom:0; }
+  .k{ color:#b9cbe1; }
+  .v{ color:#e8ecf1; text-align:right; max-width: 210px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  .legend{ width:100%; border-collapse: collapse; font-size:12px; color:#d8e6f7; }
+  .legend td{ padding:6px 8px; border-top:1px solid rgba(36,59,83,.55); }
+  .dot{ display:inline-block; width:10px; height:10px; border-radius:50%; background:#dbe7ff; margin-right:8px; }
+  .dia{ display:inline-block; width:10px; height:10px; transform: rotate(45deg); background:#dbe7ff; margin-right:8px; border-radius:2px;}
+  .mini{ display:inline-block; width:6px; height:6px; border-radius:50%; background:#dbe7ff; margin-right:10px; opacity:.9;}
+  .ring{ display:inline-block; width:12px; height:12px; border-radius:50%; border:2px solid #7fc3ff; margin-right:8px; opacity:.9;}
+  .dring{ display:inline-block; width:12px; height:12px; border-radius:50%; border:2px solid #7fc3ff; margin-right:8px; position:relative;}
+  .dring::after{content:""; position:absolute; inset:1px; border-radius:50%; border:1px solid rgba(255,255,255,.25);}
+  .danger{ display:inline-block; width:12px; height:12px; border-radius:50%; border:2px dashed #ff4d6d; margin-right:8px; }
+
+  .list{
+    margin:8px 0 0 0;
+    padding:0;
+    list-style:none;
+    max-height:240px;
+    overflow:auto;
+    border-radius:12px;
+    border:1px solid rgba(36,59,83,.55);
+  }
+  .list li{
+    padding:8px 10px;
+    border-top:1px solid rgba(36,59,83,.35);
+    cursor:pointer;
+    font-size:12px;
+    color:#dbe7ff;
+    background:rgba(7,12,22,.35);
+  }
+  .list li:hover{ background:rgba(25,49,84,.35); }
+  .list .meta{ color:var(--muted); font-size:11px; margin-top:2px; }
+
+  .toast{
+    position:fixed;
+    left:14px; bottom:14px;
+    padding:10px 12px;
+    border:1px solid rgba(36,59,83,.65);
+    border-radius:12px;
+    background:rgba(7,12,22,.72);
+    color:#dbe7ff;
+    font-size:12px;
+    opacity:0;
+    transform: translateY(8px);
+    transition: opacity .18s ease, transform .18s ease;
+    pointer-events:none;
+  }
+  .toast.show{ opacity:1; transform: translateY(0); }
+</style>
+</head>
+
+<body class="stars">
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="logo"></div>
+      <div class="title">Dawn Galaxy Atlas</div>
+      <div id="status" class="pill">Loading data…</div>
+    </div>
+
+    <button id="bOrbits" class="btn active" title="Orbit rings for the selected system only">Orbits: Selected</button>
+    <button id="bGlow" class="btn active" title="Toggle star glow">Star glow</button>
+    <button id="bGrid" class="btn" title="Toggle locator grid">Grid</button>
+    <button id="bReset" class="btn" title="Reset view and clear selection">Reset</button>
+
+    <div class="spacer"></div>
+
+    <div class="search" title="Search by name, system, classification">
+      🔎 <input id="q" placeholder="Search name, system, classification…" />
+    </div>
+
+    <div class="hint">Tap a body for details. Tap empty space for Unknown.</div>
+  </header>
+
+  <div id="plot"></div>
+
+  <aside>
+    <div class="card">
+      <h3>Micro legend</h3>
+      <table class="legend">
+        <tr><td><span class="dot"></span>Star</td></tr>
+        <tr><td><span class="dia"></span>Planet</td></tr>
+        <tr><td><span class="mini"></span>Moon (if present)</td></tr>
+        <tr><td><span class="ring"></span>Homeworld (halo, if tagged)</td></tr>
+        <tr><td><span class="dring"></span>Capital (double halo, if tagged)</td></tr>
+        <tr><td><span class="danger"></span>Conflict / restricted (dashed ring, if tagged)</td></tr>
+      </table>
+      <div class="sub" style="margin-top:10px;">Colors are unique per object.</div>
+    </div>
+
+    <div class="card" id="detailsCard">
+      <h3>Details</h3>
+      <div class="sub" id="detailsSub">Unexplored or unknown. Tap a star or planet.</div>
+
+      <div class="previewWrap">
+        <canvas id="preview" width="172" height="172"></canvas>
+
+        <div class="kvs" id="kvs"></div>
+      </div>
+
+      <div class="sub" id="sectorSub" style="margin-top:10px; display:none;"></div>
+    </div>
+
+    <div class="card">
+      <h3>Find</h3>
+      <div class="sub">Quick jump list. Updates as you type.</div>
+      <ul class="list" id="results"></ul>
+    </div>
+  </aside>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  // ===== Config =====
+  const CSV_URL = "dawn_atlas.csv";          // single file in the same GitHub Pages folder
+  const AU_TO_PLOT = 4.0;                   // orbit radius scale for this coordinate system
+  const GOLDEN_ANGLE = 137.508;
+  const BG = "#060913";
+  const GRID = "#162238";
+  const ORBIT = "rgba(25, 45, 70, 0.38)";
+  const ORBIT_W = 1;
+
+  const C = {
+    grid: "Grid Position",
+    name: "Name",
+    type: "Type",
+    sys: "System Name",
+    starRank: "Star Size Rank",
+    planetRank: "Planet Size Rank",
+    dist: "Distance from Star (AU)",
+    x: "X",
+    y: "Y",
+    classification: "Classification",
+    systemType: "System Type",
+    spec: "Spectral Type",
+    evol: "Evolutionary Stage",
+    starSpecial: "Star Special Characteristics",
+    sizeClass: "Size-Based Classification",
+    compClass: "Composition-Based Classification",
+    habit: "Habitability",
+    planetSpecial: "Planet Special Characteristics",
+    orbitNo: "Orbit Number",
+    quad: "Quadrant_16"
+  };
+
+  const statusEl = document.getElementById("status");
+  const plotEl = document.getElementById("plot");
+  const qEl = document.getElementById("q");
+  const resultsEl = document.getElementById("results");
+  const kvsEl = document.getElementById("kvs");
+  const detailsSub = document.getElementById("detailsSub");
+  const sectorSub = document.getElementById("sectorSub");
+  const toastEl = document.getElementById("toast");
+  const bOrbits = document.getElementById("bOrbits");
+  const bGlow = document.getElementById("bGlow");
+  const bGrid = document.getElementById("bGrid");
+  const bReset = document.getElementById("bReset");
+  const preview = document.getElementById("preview");
+  const ctx = preview.getContext("2d");
+
+  let RAW = [];
+  let STARS = [];
+  let PLANETS = [];
+  let showOrbits = true;
+  let showGlow = true;
+  let showGrid = false;
+  let selectedId = null;
+  let selectedSystem = null;
+
+  // per system rings (big speed win)
+  let RINGS_BY_SYS = new Map();
+
+  // ===== Helpers =====
+  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+  const toNum = (v)=> { const n = Number(String(v).trim()); return Number.isFinite(n) ? n : NaN; };
+  const clean = (v)=> (v===null || v===undefined) ? "" : String(v).trim();
+  const lower = (v)=> clean(v).toLowerCase();
+
+  function hash32(s){
+    let h = 2166136261;
+    for (let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return (h>>>0);
+  }
+  function hslToHex(h,s,l){
+    h = ((h % 360) + 360) % 360;
+    const c = (1 - Math.abs(2*l - 1)) * s;
+    const x = c * (1 - Math.abs((h/60) % 2 - 1));
+    const m = l - c/2;
+    let r=0,g=0,b=0;
+    if (h<60){ r=c; g=x; }
+    else if (h<120){ r=x; g=c; }
+    else if (h<180){ g=c; b=x; }
+    else if (h<240){ g=x; b=c; }
+    else if (h<300){ r=x; b=c; }
+    else { r=c; b=x; }
+    r = Math.round((r+m)*255);
+    g = Math.round((g+m)*255);
+    b = Math.round((b+m)*255);
+    return "#" + [r,g,b].map(v=>v.toString(16).padStart(2,"0")).join("");
+  }
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    setTimeout(()=>toastEl.classList.remove("show"), 1600);
+  }
+  function smartScale(values, outMin, outMax){
+    const nums = values.filter(v=>Number.isFinite(v)).sort((a,b)=>a-b);
+    if (!nums.length) return values.map(_=>(outMin+outMax)/2);
+    const p = (q)=> {
+      const i = (nums.length-1)*q;
+      const lo = Math.floor(i), hi = Math.ceil(i);
+      if (lo===hi) return nums[lo];
+      const t = i-lo;
+      return nums[lo]*(1-t) + nums[hi]*t;
+    };
+    const lo = p(0.05), hi = p(0.95);
+    if (lo===hi) return values.map(_=>(outMin+outMax)/2);
+    return values.map(v=>{
+      if (!Number.isFinite(v)) return (outMin+outMax)/2;
+      const vv = clamp(v, lo, hi);
+      const t = (vv - lo) / (hi - lo);
+      return outMin + t*(outMax-outMin);
+    });
+  }
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function sectorLabel(x,y){
+    const xs = RAW.map(r=>r._xplot).filter(Number.isFinite);
+    const ys = RAW.map(r=>r._yplot).filter(Number.isFinite);
+    const xmin = Math.min(...xs), xmax = Math.max(...xs);
+    const ymin = Math.min(...ys), ymax = Math.max(...ys);
+    const cols = 6, rows = 6;
+    const colW = (xmax - xmin) / cols;
+    const rowH = (ymax - ymin) / rows;
+    const ci = clamp(Math.floor((x - xmin) / colW), 0, cols-1);
+    const ri = clamp(Math.floor((y - ymin) / rowH), 0, rows-1);
+    const letter = String.fromCharCode("A".charCodeAt(0) + ci);
+    const num = (rows - ri);
+    return `${letter}-${num}`;
+  }
+
+  // ===== Preview renderer =====
+  function mulberry32(a){
+    return function() {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+  }
+  function drawSphere(seed, isStar, rot){
+    rot = rot || 0;
+    const W = preview.width, H = preview.height;
+    ctx.clearRect(0,0,W,H);
+
+    const bg = ctx.createRadialGradient(W*0.35,H*0.3,10, W*0.5,H*0.55, W*0.65);
+    bg.addColorStop(0, "rgba(255,255,255,0.10)");
+    bg.addColorStop(1, "rgba(0,0,0,0.18)");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0,0,W,H);
+
+    const h = (seed % 360);
+    const base1 = hslToHex(h, 0.72, isStar ? 0.58 : 0.46);
+    const base2 = hslToHex((h+40)%360, 0.70, isStar ? 0.62 : 0.52);
+    const base3 = hslToHex((h+220)%360, 0.65, isStar ? 0.52 : 0.40);
+
+    const cx = W/2, cy = H/2, R = W*0.33;
+
+    const g = ctx.createRadialGradient(cx - R*0.35, cy - R*0.35, R*0.15, cx, cy, R);
+    g.addColorStop(0, base2);
+    g.addColorStop(0.55, base1);
+    g.addColorStop(1, base3);
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
+    ctx.fillStyle = g; ctx.fill();
+
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
+    ctx.clip();
+
+    // Rotate ONLY the surface pattern so the lighting stays fixed.
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    ctx.translate(-cx, -cy);
+
+    const rng = mulberry32(seed);
+    ctx.globalAlpha = isStar ? 0.35 : 0.28;
+
+    // Bands
+    for (let i=0;i<18;i++){
+      const y = cy - R + rng()*R*2;
+      const th = 4 + rng()*10;
+      const col = hslToHex((h + rng()*70 - 35 + 360)%360, 0.65, isStar ? 0.70 : 0.60);
+      ctx.fillStyle = col;
+      ctx.fillRect(cx-R, y, R*2, th);
+    }
+
+    // Blobs / storms
+    ctx.globalAlpha = isStar ? 0.24 : 0.30;
+    for (let i=0;i<28;i++){
+      const a = rng()*Math.PI*2;
+      const rr = rng()*R*0.95;
+      const x = cx + rr*Math.cos(a);
+      const y = cy + rr*Math.sin(a);
+      const r = 4 + rng()*18;
+      ctx.fillStyle = hslToHex((h + rng()*120)%360, 0.62, isStar ? 0.72 : 0.56);
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+    }
+
+    // Stars: add sparkles
+    if (isStar){
+      ctx.globalAlpha = 0.65;
+      for (let i=0;i<70;i++){
+        const a = rng()*Math.PI*2;
+        const rr = rng()*R;
+        const x = cx + rr*Math.cos(a);
+        const y = cy + rr*Math.sin(a);
+        ctx.fillStyle = "rgba(255,255,255,0.25)";
+        ctx.fillRect(x, y, 1.2, 1.2);
+      }
+    }
+
+    ctx.restore(); // pattern rotation
+
+    // Fixed lighting/shadow pass
+    const sh = ctx.createRadialGradient(cx + R*0.35, cy + R*0.1, R*0.2, cx + R*0.65, cy + R*0.1, R*1.05);
+    sh.addColorStop(0, "rgba(0,0,0,0)");
+    sh.addColorStop(1, "rgba(0,0,0,0.62)");
+    ctx.fillStyle = sh;
+    ctx.fillRect(cx-R, cy-R, R*2, R*2);
+
+    // Rim highlight
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(cx, cy, R-0.6, 0, Math.PI*2);
+    ctx.stroke();
+
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+  // -------- Details image rotation (only inside the Details box) --------
+  let _prevRAF = 0;
+  let _prevSeed = 0;
+  let _prevIsStar = false;
+  let _prevRot = 0;
+  let _prevLast = 0;
+
+  function stopPreviewSpin(){
+    if (_prevRAF) cancelAnimationFrame(_prevRAF);
+    _prevRAF = 0;
+    _prevLast = 0;
+  }
+
+  function startPreviewSpin(seed, isStar){
+    _prevSeed = seed|0;
+    _prevIsStar = !!isStar;
+    _prevRot = 0;
+    if (_prevRAF) return;
+
+    const tick = (t)=>{
+      if (!_prevLast) _prevLast = t;
+      const dt = Math.min(50, t - _prevLast);
+      _prevLast = t;
+
+      // radians per ms (slow and smooth)
+      const speed = _prevIsStar ? 0.00055 : 0.00075;
+      _prevRot += dt * speed;
+
+      drawSphere(_prevSeed, _prevIsStar, _prevRot);
+      _prevRAF = requestAnimationFrame(tick);
+    };
+    _prevRAF = requestAnimationFrame(tick);
+  }
+
+
+  // ===== Data prep =====
+  function normalizeRows(rows){
+    const out = rows.map((r, idx) => {
+      const rr = {};
+      for (const k in r) rr[k] = r[k];
+
+      rr._id = idx;
+      rr._type = lower(r[C.type]);
+      rr._name = clean(r[C.name]) || "Unknown";
+      rr._sys = clean(r[C.sys]) || "Unknown System";
+      rr._x = toNum(r[C.x]);
+      rr._y = toNum(r[C.y]);
+
+      rr._starRank = toNum(r[C.starRank]);
+      rr._planetRank = toNum(r[C.planetRank]);
+      rr._dist = toNum(r[C.dist]);
+      rr._orbitNo = toNum(r[C.orbitNo]);
+
+      rr._isStar = rr._type === "star";
+      rr._isPlanet = rr._type === "planet";
+      rr._isMoon = rr._type === "moon";
+
+      // optional role tags
+      const role = lower(r["Role"]);
+      rr._isHomeworld = role.includes("homeworld") || lower(r["Homeworld"]) === "true";
+      rr._isCapital = role.includes("capital") || lower(r["Capital"]) === "true";
+      rr._isConflict = role.includes("conflict") || role.includes("restricted") || lower(r["Conflict"]) === "true";
+
+      return rr;
+    });
+
+    // stable colors via sorted order
+    const sorted = [...out].sort((a,b)=>{
+      const as = (a._sys||"").localeCompare(b._sys||"");
+      if (as!==0) return as;
+      return (a._name||"").localeCompare(b._name||"");
+    });
+    const colorById = new Map();
+    sorted.forEach((r,i)=>{
+      const hue = (i * GOLDEN_ANGLE) % 360;
+      const l = r._isStar ? 0.60 : 0.52;
+      colorById.set(r._id, hslToHex(hue, 0.72, l));
+    });
+    out.forEach(r=> r._color = colorById.get(r._id) || "#99c2ff");
+
+    // sizes
+    const unified = out.map(r=>{
+      if (r._isStar) return r._starRank;
+      if (r._isPlanet || r._isMoon) return r._planetRank;
+      return NaN;
+    });
+    const sizes = smartScale(unified, 6, 20);
+    out.forEach((r,i)=>{
+      r._ms = sizes[i] * (r._isStar ? 1.15 : 1.0) * (r._isMoon ? 0.6 : 1.0);
+    });
+    return out;
+  }
+
+  function computePositionsAndRings(){
+    RAW.forEach(r=>{ r._xplot = r._x; r._yplot = r._y; });
+
+    const bySys = new Map();
+    for (const r of RAW){
+      const key = (r._sys || "Unknown System").trim();
+      if (!bySys.has(key)) bySys.set(key, []);
+      bySys.get(key).push(r);
+    }
+
+    // primary star per system
+    const primary = new Map();
+    for (const [sys, arr] of bySys.entries()){
+      const stars = arr.filter(r=>r._isStar);
+      if (stars.length){
+        stars.sort((a,b)=> (toNum(b._starRank)||-1e9) - (toNum(a._starRank)||-1e9));
+        primary.set(sys, stars[0]);
+      } else {
+        primary.set(sys, arr[0]);
+      }
+    }
+
+    // offset extra stars so they do not stack
+    for (const [sys, arr] of bySys.entries()){
+      const prim = primary.get(sys);
+      const stars = arr.filter(r=>r._isStar);
+      if (stars.length > 1){
+        let k = 0;
+        for (const s of stars){
+          if (s._id === prim._id) continue;
+          const ang = (hash32(sys + "|" + s._name) % 360) * Math.PI/180;
+          const rad = 3.0 + (k % 3) * 1.4;
+          s._xplot = prim._x + rad*Math.cos(ang);
+          s._yplot = prim._y + rad*Math.sin(ang);
+          k++;
+        }
+      }
+    }
+
+    // place planets around the primary star
+    for (const [sys, arr] of bySys.entries()){
+      const prim = primary.get(sys);
+      const sx = prim._xplot, sy = prim._yplot;
+
+      const planets = arr.filter(r=>r._isPlanet);
+      for (const p of planets){
+        const d = p._dist;
+        const baseR = Number.isFinite(d) && d>0 ? (d * AU_TO_PLOT) : 6.0;
+        const aSeed = hash32(sys + "|" + p._name + "|" + (Number.isFinite(p._orbitNo)?p._orbitNo:""));
+        const ang = (aSeed % 360) * Math.PI/180;
+        const jitter = ((aSeed >>> 8) % 1000) / 1000;
+        const r = baseR * (0.96 + 0.08*jitter);
+        p._xplot = sx + r*Math.cos(ang);
+        p._yplot = sy + r*Math.sin(ang);
+      }
+    }
+
+    // rings per system (only show selected system rings)
+    RINGS_BY_SYS = new Map();
+    for (const [sys, arr] of bySys.entries()){
+      const prim = primary.get(sys);
+      const sx = prim._xplot, sy = prim._yplot;
+      const planets = arr.filter(r=>r._isPlanet);
+
+      const ds = planets.map(p=>p._dist).filter(v=>Number.isFinite(v) && v>0);
+      if (!ds.length) continue;
+
+      const uniq = Array.from(new Set(ds.map(v=>v.toFixed(3)))).map(s=>Number(s)).sort((a,b)=>a-b);
+      const shapes = [];
+      for (const d of uniq){
+        const r = d * AU_TO_PLOT;
+        shapes.push({
+          type:"circle", xref:"x", yref:"y",
+          x0:sx-r, x1:sx+r, y0:sy-r, y1:sy+r,
+          line:{color:ORBIT, width:ORBIT_W, dash:"dot"},
+          opacity:0.9
+        });
+      }
+      RINGS_BY_SYS.set(sys, shapes);
+    }
+  }
+
+  function computeRanges(){
+    const xs = RAW.map(r=>r._xplot).filter(Number.isFinite);
+    const ys = RAW.map(r=>r._yplot).filter(Number.isFinite);
+    const xmin = Math.min(...xs), xmax = Math.max(...xs);
+    const ymin = Math.min(...ys), ymax = Math.max(...ys);
+    const xp = Math.max(1e-6, 0.005*(xmax-xmin));
+    const yp = Math.max(1e-6, 0.005*(ymax-ymin));
+    return { xmin,xmax,ymin,ymax, x_tight:[xmin-xp, xmax+xp], y_tight:[ymin-yp, ymax+yp] };
+  }
+
+  function gridShapes(bounds){
+    const cols = 6, rows = 6;
+    const {xmin,xmax,ymin,ymax} = bounds;
+    const colW = (xmax - xmin)/cols;
+    const rowH = (ymax - ymin)/rows;
+    const shapes = [];
+    for (let i=1;i<cols;i++){
+      const x = xmin + i*colW;
+      shapes.push({type:"line", xref:"x", yref:"y", x0:x, x1:x, y0:ymin, y1:ymax,
+                   line:{color:"rgba(22,34,56,0.45)", width:1, dash:"dot"}});
+    }
+    for (let j=1;j<rows;j++){
+      const y = ymin + j*rowH;
+      shapes.push({type:"line", xref:"x", yref:"y", x0:xmin, x1:xmax, y0:y, y1:y,
+                   line:{color:"rgba(22,34,56,0.45)", width:1, dash:"dot"}});
+    }
+    return shapes;
+  }
+
+  function shapesForView(bounds){
+    const shapes = [];
+    if (showOrbits && selectedSystem && RINGS_BY_SYS.has(selectedSystem)){
+      shapes.push(...RINGS_BY_SYS.get(selectedSystem));
+    }
+    if (showGrid) shapes.push(...gridShapes(bounds));
+    return shapes;
+  }
+
+  function buildTraces(){
+    STARS = RAW.filter(r=>r._isStar);
+    PLANETS = RAW.filter(r=>r._isPlanet);
+    const MOONS = RAW.filter(r=>r._isMoon);
+
+    const glowLine = showGlow ? {width:1.2, color:"rgba(210,230,255,0.35)"} : {width:0.5, color:"#0e1525"};
+    const starLine = showGlow ? glowLine : {width:0.5, color:"#0e1525"};
+
+    const starTrace = {
+      type:"scattergl",
+      mode:"markers",
+      x: STARS.map(r=>r._xplot),
+      y: STARS.map(r=>r._yplot),
+      text: STARS.map(r=>r._name),
+      customdata: STARS.map(r=>r._id),
+      marker:{ size: STARS.map(r=>r._ms), color: STARS.map(r=>r._color), line: starLine, symbol: "circle" },
+      hovertemplate:"<b>%{text}</b><br>System: %{meta}<extra></extra>",
+      meta: STARS.map(r=>r._sys.trim()),
+      showlegend:false
+    };
+
+    const planetTrace = {
+      type:"scattergl",
+      mode:"markers",
+      x: PLANETS.map(r=>r._xplot),
+      y: PLANETS.map(r=>r._yplot),
+      text: PLANETS.map(r=>r._name),
+      customdata: PLANETS.map(r=>r._id),
+      marker:{ size: PLANETS.map(r=>r._ms*0.92), color: PLANETS.map(r=>r._color), line:{width:0.8, color:"rgba(10,70,55,0.45)"}, symbol: "diamond" },
+      hovertemplate:"<b>%{text}</b><br>System: %{meta}<br>AU: %{customdata2}<extra></extra>",
+      meta: PLANETS.map(r=>r._sys.trim()),
+      customdata2: PLANETS.map(r=> Number.isFinite(r._dist) ? r._dist.toFixed(2) : ""),
+      showlegend:false
+    };
+
+    const moonTrace = {
+      type:"scattergl",
+      mode:"markers",
+      x: MOONS.map(r=>r._xplot),
+      y: MOONS.map(r=>r._yplot),
+      text: MOONS.map(r=>r._name),
+      customdata: MOONS.map(r=>r._id),
+      marker:{ size: MOONS.map(r=>Math.max(3, r._ms*0.55)), color: MOONS.map(r=>r._color), line:{width:0.6, color:"rgba(220,230,255,0.22)"}, symbol: "circle" },
+      hovertemplate:"<b>%{text}</b><br>System: %{meta}<extra></extra>",
+      meta: MOONS.map(r=>r._sys.trim()),
+      showlegend:false
+    };
+
+    return [starTrace, planetTrace, moonTrace];
+  }
+
+  function buildLayout(bounds){
+    return {
+      paper_bgcolor: BG,
+      plot_bgcolor: BG,
+      margin: {l:20, r:10, t:18, b:26},
+      xaxis: {title:"X", zeroline:false, showgrid:true, gridcolor: GRID, range: bounds.x_tight},
+      yaxis: {title:"Y", zeroline:false, showgrid:true, gridcolor: GRID, range: bounds.y_tight},
+      shapes: shapesForView(bounds),
+      dragmode: "pan",
+      hovermode: "closest"
+    };
+  }
+
+  // ===== Details panel =====
+  function setUnknown(sector){
+    selectedId = null;
+    selectedSystem = null;
+    detailsSub.textContent = "Unexplored or unknown. Tap a star or planet.";
+    sectorSub.style.display = sector ? "block" : "none";
+    sectorSub.textContent = sector ? ("Sector: " + sector) : "";
+    stopPreviewSpin();
+    drawSphere(hash32("unknown"), false, 0);
+
+    kvsEl.innerHTML = [
+      ["Name", "Unknown"],
+      ["Status", "Unexplored or unknown"],
+      ["System", "Unknown"],
+      ["Classification", "Unknown"],
+      ["Habitability", "Unknown"]
+    ].map(([k,v]) => `<div class="kv"><div class="k">${k}</div><div class="v" title="${v}">${v}</div></div>`).join("");
+
+    // hide orbits when unknown (selected-only)
+    relayoutShapes();
+  }
+
+  function pickFields(row){
+    const blacklist = /notable\s*events?/i;
+
+    const preferred = [
+      ["Name", row[C.name]],
+      ["Type", row[C.type]],
+      ["System", row[C.sys]],
+      ["System type", row[C.systemType]],
+      ["Classification", row[C.classification]],
+      ["Spectral type", row[C.spec]],
+      ["Evolution", row[C.evol]],
+      ["Size class", row[C.sizeClass]],
+      ["Composition", row[C.compClass]],
+      ["Habitability", row[C.habit]],
+      ["Orbit no", row[C.orbitNo]],
+      ["AU", row[C.dist]],
+      ["Special", row[C.planetSpecial] || row[C.starSpecial]],
+      ["Quadrant", row[C.quad]],
+      ["Inhabitants", row["Inhabitants"]],
+      ["Species", row["Species"]],
+      ["Faction", row["Faction"]],
+      ["Notes", row["Notes"]]
+    ];
+
+    const cleanPairs = [];
+    for (const [k,v] of preferred){
+      if (!k) continue;
+      if (blacklist.test(k)) continue;
+      const vv = clean(v);
+      if (!vv) continue;
+      cleanPairs.push([k, vv]);
+    }
+    for (const k of ["Inhabitants","Species","Faction"]){
+      if (blacklist.test(k)) continue;
+      if (!clean(row[k])) cleanPairs.push([k, "Unknown"]);
+    }
+
+    cleanPairs.push(["Grid", clean(row[C.grid]) || "Unknown"]);
+    return cleanPairs.slice(0, 14);
+  }
+
+  function showDetailsById(id){
+    const r = RAW.find(x=>x._id===id);
+    if (!r) return;
+    selectedId = id;
+    selectedSystem = r._sys.trim();
+
+    detailsSub.textContent = (r._isStar ? "Star selected." : "Planet selected.") + " Tap empty space for Unknown.";
+    sectorSub.style.display = "none";
+
+    startPreviewSpin(hash32(r._sys + "|" + r._name), r._isStar);
+
+    kvsEl.innerHTML = pickFields(r).map(([k,v]) => `
+      <div class="kv"><div class="k">${escapeHtml(k)}</div><div class="v" title="${escapeHtml(v)}">${escapeHtml(v)}</div></div>
+    `).join("");
+
+    relayoutShapes();
+  }
+
+  // ===== Search =====
+  function buildSearchList(q){
+    const qq = lower(q);
+    if (!qq){ resultsEl.innerHTML = ""; return; }
+    const hits = [];
+    for (const r of RAW){
+      const hay = (r._name + " " + r._sys + " " + clean(r[C.classification]) + " " + clean(r[C.habit])).toLowerCase();
+      if (hay.includes(qq)) hits.push(r);
+      if (hits.length >= 60) break;
+    }
+    resultsEl.innerHTML = hits.map(r => `
+      <li data-id="${r._id}">
+        <div><b>${escapeHtml(r._name)}</b></div>
+        <div class="meta">${escapeHtml(r._type)} · ${escapeHtml(r._sys.trim())}</div>
+      </li>
+    `).join("");
+
+    Array.from(resultsEl.querySelectorAll("li")).forEach(li=>{
+      li.addEventListener("click", () => focusOnId(Number(li.getAttribute("data-id"))));
+    });
+  }
+
+  function focusOnId(id){
+    const r = RAW.find(x=>x._id===id);
+    if (!r) return;
+    showDetailsById(id);
+    const span = 70;
+    Plotly.relayout(plotEl, {"xaxis.range": [r._xplot - span, r._xplot + span], "yaxis.range": [r._yplot - span, r._yplot + span]});
+    showToast("Jumped to " + r._name);
+  }
+
+  // ===== Plot wiring =====
+  function relayoutShapes(){
+    const b = computeRanges();
+    Plotly.relayout(plotEl, {shapes: shapesForView(b)});
+  }
+
+  function render(){
+    computePositionsAndRings();
+    const bounds = computeRanges();
+    Plotly.newPlot(plotEl, buildTraces(), buildLayout(bounds), {
+      displayModeBar:false,
+      scrollZoom:true,
+      responsive:true
+    }).then(() => {
+      statusEl.textContent = "Ready";
+      statusEl.style.color = "#bfe5ff";
+
+      plotEl.on("plotly_click", (ev) => {
+        const id = ev?.points?.[0]?.customdata;
+        if (id === undefined || id === null) return;
+        showDetailsById(Number(id));
+        window.__pointClicked = true;
+        setTimeout(()=>window.__pointClicked=false, 0);
+      });
+
+      plotEl.addEventListener("click", (e) => {
+        if (window.__pointClicked) return;
+
+        const bb = plotEl.getBoundingClientRect();
+        const px = e.clientX - bb.left;
+        const py = e.clientY - bb.top;
+
+        const fullLayout = plotEl._fullLayout;
+        if (!fullLayout) { setUnknown(null); return; }
+
+        const xaxis = fullLayout.xaxis, yaxis = fullLayout.yaxis;
+        const xa = xaxis._offset, xb = xaxis._offset + xaxis._length;
+        const ya = yaxis._offset, yb = yaxis._offset + yaxis._length;
+        if (px < xa || px > xb || py < ya || py > yb) return;
+
+        const xr = xaxis.range;
+        const yr = yaxis.range;
+        const x = xr[0] + (px - xa) / (xb - xa) * (xr[1]-xr[0]);
+        const y = yr[1] - (py - ya) / (yb - ya) * (yr[1]-yr[0]);
+
+        setUnknown(sectorLabel(x,y));
+      });
+
+      setUnknown(null);
+    });
+  }
+
+  function load(){
+    statusEl.textContent = "Loading data…";
+    fetch(CSV_URL, {cache:"no-store"})
+      .then(resp => { if (!resp.ok) throw new Error("HTTP " + resp.status); return resp.text(); })
+      .then(text => {
+        Papa.parse(text, {
+          header:true,
+          worker:true,
+          skipEmptyLines:true,
+          complete:(res)=>{
+            const rows = res.data || [];
+            if (!rows.length){
+              statusEl.textContent = "No rows found";
+              statusEl.style.color = "#ffcc66";
+              setUnknown(null);
+              return;
+            }
+            RAW = normalizeRows(rows);
+
+            const starCt = RAW.filter(r=>r._isStar).length;
+            const planetCt = RAW.filter(r=>r._isPlanet).length;
+            statusEl.textContent = `Loaded ${rows.length} rows`;
+            statusEl.style.color = "#bfe5ff";
+            showToast(`Stars: ${starCt} · Planets: ${planetCt}`);
+
+            render();
+          }
+        });
+      })
+      .catch(err => {
+        statusEl.textContent = "Load error";
+        statusEl.style.color = "#ff4d6d";
+        console.error(err);
+      });
+  }
+
+  // ===== Controls =====
+  bOrbits.addEventListener("click", () => {
+    showOrbits = !showOrbits;
+    bOrbits.classList.toggle("active", showOrbits);
+    relayoutShapes();
+  });
+  bGlow.addEventListener("click", () => {
+    showGlow = !showGlow;
+    bGlow.classList.toggle("active", showGlow);
+    // re-render traces only
+    const b = computeRanges();
+    Plotly.react(plotEl, buildTraces(), buildLayout(b), {displayModeBar:false, scrollZoom:true, responsive:true});
+  });
+  bGrid.addEventListener("click", () => {
+    showGrid = !showGrid;
+    bGrid.classList.toggle("active", showGrid);
+    relayoutShapes();
+  });
+  bReset.addEventListener("click", () => {
+    const b = computeRanges();
+    Plotly.relayout(plotEl, {"xaxis.range": b.x_tight, "yaxis.range": b.y_tight});
+    setUnknown(null);
+    showToast("Reset");
+  });
+  qEl.addEventListener("input", () => buildSearchList(qEl.value));
+
+  load();
+})();
+</script>
+</body>
+</html>
