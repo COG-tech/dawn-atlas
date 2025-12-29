@@ -1,0 +1,967 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dawn Galaxy Atlas</title>
+
+<style>
+  :root{
+    --bg0:#05070f;
+    --panel:#0a1022;
+    --line:#213156;
+    --text:#e7edf7;
+    --muted:#a7b4c8;
+    --accent:#7fb0ff;
+    --warn:#ffcc66;
+  }
+  html,body{height:100%; margin:0; background:radial-gradient(1200px 700px at 18% 12%, #0b1433 0%, var(--bg0) 55%, #04050c 100%); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+  #app{position:fixed; inset:0; display:grid; grid-template-columns: 1fr 390px;}
+  @media (max-width: 980px){ #app{grid-template-columns:1fr; grid-template-rows: 62vh 38vh;} }
+
+  #mapWrap{position:relative; min-width:0; overflow:hidden;}
+  #bg-canvas, #deck-canvas{position:absolute; inset:0; width:100%; height:100%; display:block;}
+  #bg-canvas{z-index:0;}
+  #deck-canvas{z-index:1;}
+
+  .topbar{
+    position:absolute; left:12px; right:12px; top:12px; z-index:3;
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    background:rgba(6,9,19,0.55); border:1px solid rgba(33,49,86,0.6);
+    border-radius:14px; padding:10px 12px; backdrop-filter: blur(8px);
+  }
+  .brand{font-weight:900; letter-spacing:.2px; display:flex; align-items:center; gap:10px;}
+  .chip{font-size:12px; color:var(--muted); border:1px solid rgba(33,49,86,0.55); padding:4px 8px; border-radius:999px; background:rgba(10,16,34,0.55);}
+  .btn{
+    font-size:12px; color:var(--text);
+    background:rgba(10,16,34,0.65);
+    border:1px solid rgba(33,49,86,0.7);
+    border-radius:10px;
+    padding:7px 10px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .btn:hover{border-color:rgba(127,176,255,0.75);}
+  .btn.on{background:rgba(25,49,84,0.7);}
+  .spacer{flex:1}
+  .search{
+    display:flex; align-items:center; gap:8px;
+    border:1px solid rgba(33,49,86,0.7);
+    background:rgba(10,16,34,0.55);
+    border-radius:12px; padding:7px 10px;
+    min-width: 220px;
+  }
+  .search input{
+    border:0; outline:0; background:transparent; color:var(--text);
+    width:100%; font-size:13px;
+  }
+
+  #panel{
+    border-left:1px solid rgba(33,49,86,0.6);
+    background:linear-gradient(180deg, rgba(10,16,34,0.92) 0%, rgba(7,10,20,0.92) 100%);
+    padding:14px 14px 10px 14px;
+    overflow:auto;
+  }
+  @media (max-width: 980px){ #panel{border-left:0; border-top:1px solid rgba(33,49,86,0.6);} }
+
+  .card{
+    border:1px solid rgba(33,49,86,0.55);
+    background:rgba(10,16,34,0.6);
+    border-radius:16px;
+    padding:12px;
+    margin-bottom:12px;
+  }
+  .h1{font-size:16px; font-weight:900; margin:0 0 6px 0;}
+  .sub{font-size:12px; color:var(--muted); margin:0;}
+  .divider{height:1px; background:rgba(33,49,86,0.5); margin:10px 0;}
+
+  .previewRow{display:grid; grid-template-columns: 92px 1fr; gap:12px; align-items:center;}
+  .planetThumb{
+    width:92px; height:92px; border-radius:20px;
+    background:radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18), rgba(0,0,0,0.15) 55%, rgba(0,0,0,0.35) 100%);
+    border:1px solid rgba(33,49,86,0.65);
+    overflow:hidden;
+  }
+  .planetThumb canvas{width:100%; height:100%; display:block;}
+  .pill{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:4px 9px; border-radius:999px; font-size:12px;
+    border:1px solid rgba(33,49,86,0.6); background:rgba(12,20,48,0.45);
+    color:var(--text);
+  }
+  .dot{width:8px; height:8px; border-radius:999px; background:var(--accent); box-shadow:0 0 12px rgba(127,176,255,0.45);}
+
+  table{width:100%; border-collapse:collapse;}
+  td{vertical-align:top; padding:6px 0;}
+  td.k{width:44%; color:var(--muted); font-size:12px; padding-right:10px;}
+  td.v{color:var(--text); font-size:12.5px; line-height:1.35;}
+  .small{font-size:11px; color:var(--muted);}
+  .warn{color:var(--warn);}
+  .list{max-height:260px; overflow:auto; border:1px solid rgba(33,49,86,0.45); border-radius:14px; padding:8px; background:rgba(12,20,48,0.35);}
+  .listItem{padding:8px 8px; border-radius:12px; cursor:pointer; display:flex; gap:8px; align-items:center;}
+  .listItem:hover{background:rgba(25,49,84,0.45);}
+  .swatch{width:10px; height:10px; border-radius:999px; flex:0 0 auto; border:1px solid rgba(255,255,255,0.22);}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;}
+</style>
+</head>
+
+<body>
+<div id="app">
+  <div id="mapWrap">
+    <canvas id="bg-canvas"></canvas>
+    <canvas id="deck-canvas"></canvas>
+
+    <div class="topbar">
+      <div class="brand">
+        <span style="font-size:16px;">🌌</span>
+        <span>Dawn Galaxy Atlas</span>
+        <span id="statusChip" class="chip">Loading</span>
+      </div>
+
+      <button id="btnOrbits" class="btn on" title="Show orbit rings for selected system only">Orbits: Selected</button>
+      <button id="btnStars" class="btn on" title="Toggle star glow">Star glow</button>
+      <button id="btnReset" class="btn" title="Reset view">Reset</button>
+
+      <div class="spacer"></div>
+
+      <div class="search" title="Search by planet/star/system/species">
+        <span style="opacity:.75">🔎</span>
+        <input id="searchBox" type="text" placeholder="Search name, system, species..." autocomplete="off" />
+      </div>
+    </div>
+  </div>
+
+  <aside id="panel">
+    <div class="card">
+      <div class="h1">Details</div>
+      <div class="sub">Tap a star/planet. Tap empty space for Unknown.</div>
+
+      <div class="divider"></div>
+
+      <div class="previewRow">
+        <div class="planetThumb"><canvas id="thumbCanvas" width="128" height="128"></canvas></div>
+        <div>
+          <div id="selTitle" class="h1" style="margin:0 0 6px 0;">Unknown</div>
+          <div id="selMeta" class="sub">Unexplored sector</div>
+          <div style="margin-top:8px;">
+            <span class="pill"><span class="dot"></span><span id="selTag">No selection</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div id="detailsWrap" class="small">Loading…</div>
+    </div>
+
+    <div class="card">
+      <div class="h1">Find</div>
+      <div class="sub">Quick jump list.</div>
+      <div class="divider"></div>
+      <div id="list" class="list"></div>
+      <div class="small" style="margin-top:8px;">This list updates live as you type.</div>
+    </div>
+
+    <div class="card">
+      <div class="h1">Data files</div>
+      <div class="sub">Keep these files in the same GitHub Pages folder.</div>
+      <div class="divider"></div>
+      <div class="small mono">Book1.csv (geometry)</div>
+      <div class="small mono">Planets_and_Stars_Esperanto.csv (lore)</div>
+      <div class="small" style="margin-top:8px;">Update either CSV, commit, and the QR code URL stays the same.</div>
+    </div>
+  </aside>
+</div>
+
+<!-- CSV parser (fast, handles big files) -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<!-- deck.gl UMD bundle -->
+<script src="https://unpkg.com/deck.gl@9.2.5/dist.min.js"></script>
+
+<script>
+/* ---------------- config ---------------- */
+const FILE_GEOM = "Book1.csv";
+const FILE_LORE = "Planets_and_Stars_Esperanto.csv";
+
+const GOLDEN_ANGLE = 137.508;
+const AU_TO_PLOT = 0.33;         // orbit ring scaling
+const MAX_TEXTURED = 60;         // cap textured planets (perf)
+const ZOOM_TEXTURED = 2.2;       // when to show textured planets in selected system
+const BG0 = "#05070f";
+
+/* ---------------- dom refs ---------------- */
+const statusChip = document.getElementById('statusChip');
+const btnOrbits  = document.getElementById('btnOrbits');
+const btnStars   = document.getElementById('btnStars');
+const btnReset   = document.getElementById('btnReset');
+const searchBox  = document.getElementById('searchBox');
+const listEl     = document.getElementById('list');
+
+const selTitle = document.getElementById('selTitle');
+const selMeta  = document.getElementById('selMeta');
+const selTag   = document.getElementById('selTag');
+const detailsWrap = document.getElementById('detailsWrap');
+const thumbCanvas = document.getElementById('thumbCanvas');
+const thumbCtx = thumbCanvas.getContext('2d');
+
+/* ---------------- helpers ---------------- */
+function clamp(v,a,b){ return Math.max(a, Math.min(b,v)); }
+function isBlank(v){ return v === null || v === undefined || String(v).trim() === ""; }
+function norm(s){ return String(s||"").trim().toLowerCase(); }
+
+function hash01(s){
+  s = String(s);
+  let h = 2166136261 >>> 0; // FNV-1a
+  for(let i=0;i<s.length;i++){
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) / 4294967295;
+}
+
+function hslToRgb(h,s,l){
+  h = (h%360+360)%360 / 360;
+  let r,g,b;
+  if (s === 0) { r=g=b=l; }
+  else{
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    const hue2rgb = (p,q,t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
+}
+
+function rgba(arr, a){ return `rgba(${arr[0]},${arr[1]},${arr[2]},${a})`; }
+
+// location strings like "246-157" or "246, -157" => [246,-157]
+function parseXY(v){
+  if(isBlank(v)) return null;
+  const nums = String(v).match(/-?\d+(\.\d+)?/g);
+  if(!nums || nums.length < 2) return null;
+  const x = Number(nums[0]);
+  const y = Number(nums[1]);
+  if(!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return [x,y];
+}
+
+function safeNum(v){
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function pickCol(row, candidates){
+  // returns the first matching column name present in row (case-insensitive)
+  const keys = Object.keys(row||{});
+  const map = new Map(keys.map(k => [norm(k), k]));
+  for(const c of candidates){
+    const k = map.get(norm(c));
+    if(k) return k;
+  }
+  return null;
+}
+
+function skipField(k){
+  const t = norm(k);
+  return t.includes("notable events") || (t.includes("notable") && t.includes("event"));
+}
+
+/* ---------------- planet texture generator ---------------- */
+const PLANET_ICON_CACHE = new Map();
+function planetCanvas(seed, baseRgb, kindText){
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 128;
+  const g = c.getContext('2d');
+  const cx = 64, cy = 64, R = 52;
+
+  g.clearRect(0,0,128,128);
+
+  const glow = g.createRadialGradient(cx,cy, R*0.55, cx,cy, R*1.25);
+  glow.addColorStop(0, rgba(baseRgb, 0.22));
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = glow;
+  g.beginPath(); g.arc(cx,cy, R*1.22, 0, Math.PI*2); g.fill();
+
+  const grad = g.createRadialGradient(cx - 18, cy - 20, 10, cx, cy, R);
+  const [r0,g0,b0] = baseRgb;
+  grad.addColorStop(0, `rgb(${clamp(r0+80,0,255)},${clamp(g0+80,0,255)},${clamp(b0+80,0,255)})`);
+  grad.addColorStop(0.55, `rgb(${r0},${g0},${b0})`);
+  grad.addColorStop(1, `rgb(${clamp(r0-65,0,255)},${clamp(g0-65,0,255)},${clamp(b0-65,0,255)})`);
+  g.fillStyle = grad;
+  g.beginPath(); g.arc(cx,cy, R, 0, Math.PI*2); g.fill();
+
+  const kind = String(kindText||"").toLowerCase();
+  g.save();
+  g.beginPath(); g.arc(cx,cy,R,0,Math.PI*2); g.clip();
+
+  if(kind.includes("gas") || kind.includes("sphere") || kind.includes("proto")){
+    for(let i=0;i<10;i++){
+      const y = cy - R + i*(2*R/10);
+      const a = 0.06 + 0.05*hash01(seed+"|band|"+i);
+      g.fillStyle = `rgba(255,255,255,${a})`;
+      g.fillRect(cx - R, y, 2*R, (2*R/10)*0.6);
+    }
+  } else if(kind.includes("ice") || kind.includes("cryo")){
+    for(let i=0;i<140;i++){
+      const x = cx - R + (2*R)*hash01(seed+"|ice|x|"+i);
+      const y = cy - R + (2*R)*hash01(seed+"|ice|y|"+i);
+      const a = 0.05 + 0.10*hash01(seed+"|ice|a|"+i);
+      g.fillStyle = `rgba(255,255,255,${a})`;
+      g.beginPath(); g.arc(x,y, 1.2 + 2.8*hash01(seed+"|ice|r|"+i), 0, Math.PI*2); g.fill();
+    }
+  } else {
+    for(let i=0;i<180;i++){
+      const x = cx - R + (2*R)*hash01(seed+"|spk|x|"+i);
+      const y = cy - R + (2*R)*hash01(seed+"|spk|y|"+i);
+      const a = 0.05 + 0.10*hash01(seed+"|spk|a|"+i);
+      g.fillStyle = `rgba(0,0,0,${a})`;
+      g.beginPath(); g.arc(x,y, 0.8 + 2.4*hash01(seed+"|spk|r|"+i), 0, Math.PI*2); g.fill();
+    }
+  }
+
+  const shade = g.createRadialGradient(cx + 22, cy + 10, 12, cx + 40, cy + 18, R*1.1);
+  shade.addColorStop(0, 'rgba(0,0,0,0)');
+  shade.addColorStop(1, 'rgba(0,0,0,0.55)');
+  g.fillStyle = shade;
+  g.fillRect(cx-R, cy-R, 2*R, 2*R);
+
+  g.restore();
+
+  g.strokeStyle = 'rgba(255,255,255,0.12)';
+  g.lineWidth = 2;
+  g.beginPath(); g.arc(cx,cy,R,0,Math.PI*2); g.stroke();
+
+  return c;
+}
+function getPlanetIconUrl(obj){
+  const key = obj.id;
+  if(PLANET_ICON_CACHE.has(key)) return PLANET_ICON_CACHE.get(key);
+  const kind = obj.lore["Planet Classification Descriptions"] || obj.lore["Planet Classification Codes"] || "";
+  const canvas = planetCanvas("map|" + key, obj.rgb, kind);
+  const url = canvas.toDataURL('image/png');
+  PLANET_ICON_CACHE.set(key, url);
+  return url;
+}
+
+/* ---------------- background stars ---------------- */
+function drawBg(){
+  const c = document.getElementById('bg-canvas');
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  const w = c.clientWidth, h = c.clientHeight;
+  c.width = Math.floor(w*dpr); c.height = Math.floor(h*dpr);
+  const g = c.getContext('2d');
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,w,h);
+
+  const vg = g.createRadialGradient(w*0.35, h*0.25, 0, w*0.5, h*0.5, Math.max(w,h)*0.9);
+  vg.addColorStop(0, 'rgba(25,45,96,0.10)');
+  vg.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = vg;
+  g.fillRect(0,0,w,h);
+
+  const n = Math.round(900 + (w*h)/9000);
+  for(let i=0;i<n;i++){
+    const x = Math.random()*w;
+    const y = Math.random()*h;
+    const r = Math.random()*1.3;
+    const a = 0.15 + Math.random()*0.55;
+    g.fillStyle = `rgba(255,255,255,${a})`;
+    g.beginPath(); g.arc(x,y,r,0,Math.PI*2); g.fill();
+  }
+}
+window.addEventListener('resize', () => { drawBg(); if(deckgl) deckgl.redraw(true); });
+
+/* ---------------- state ---------------- */
+let deckgl = null;
+let DATA = {stars:[], planets:[], all:[]};
+let SELECTED = null;
+let selectedSystem = null;
+let showOrbitsMode = "selected"; // selected / off
+let showStarGlow = true;
+let viewState2d = {target:[0,0,0], zoom:0, minZoom:-2, maxZoom:10};
+
+/* ---------------- UI ---------------- */
+function setUnknown(){
+  SELECTED = null;
+  selectedSystem = null;
+  selTitle.textContent = "Unknown";
+  selMeta.textContent  = "Unexplored sector";
+  selTag.textContent   = "No selection";
+  detailsWrap.innerHTML = `<div class="small">Unexplored or unknown. Tap a planet or star to reveal lore.</div>`;
+  thumbCtx.clearRect(0,0,128,128);
+  thumbCtx.fillStyle = 'rgba(255,255,255,0.05)';
+  thumbCtx.beginPath(); thumbCtx.arc(64,64,44,0,Math.PI*2); thumbCtx.fill();
+  thumbCtx.strokeStyle = 'rgba(255,255,255,0.10)';
+  thumbCtx.lineWidth = 2;
+  thumbCtx.beginPath(); thumbCtx.arc(64,64,44,0,Math.PI*2); thumbCtx.stroke();
+  updateLayers();
+}
+
+function renderDetails(obj){
+  if(!obj){ setUnknown(); return; }
+  SELECTED = obj;
+  selectedSystem = obj.system || null;
+
+  const t = obj.type === "star" ? "Star" : (obj.type === "planet" ? "Planet" : "Body");
+  selTitle.textContent = obj.name || "Unknown";
+  selMeta.textContent  = `${t}. System: ${obj.system || "Unknown"}`;
+  selTag.textContent   = obj.type === "planet" ? (obj.lore["Species Name"] || obj.lore["Species"] || obj.species || "Planet selected") : "Star selected";
+
+  thumbCtx.clearRect(0,0,128,128);
+  if(obj.type === "planet"){
+    const kind = obj.lore["Planet Classification Descriptions"] || obj.lore["Planet Classification Codes"] || "";
+    const canvas = planetCanvas("thumb|" + obj.id, obj.rgb, kind);
+    thumbCtx.drawImage(canvas,0,0,128,128);
+  } else {
+    const [r,g,b] = obj.rgb;
+    const glow = thumbCtx.createRadialGradient(64,64,6,64,64,54);
+    glow.addColorStop(0, `rgba(${r},${g},${b},0.95)`);
+    glow.addColorStop(0.45, `rgba(${r},${g},${b},0.28)`);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    thumbCtx.fillStyle = glow;
+    thumbCtx.beginPath(); thumbCtx.arc(64,64,54,0,Math.PI*2); thumbCtx.fill();
+    thumbCtx.fillStyle = `rgba(${r},${g},${b},0.85)`;
+    thumbCtx.beginPath(); thumbCtx.arc(64,64,14,0,Math.PI*2); thumbCtx.fill();
+  }
+
+  // Build details table:
+  // - show "Status" known if lore has more than identity fields
+  // - include geometry fields + all lore fields
+  const rows = [];
+  const add = (k,v) => {
+    if(skipField(k)) return;
+    const val = isBlank(v) ? `<span class="warn">Unknown</span>` : String(v);
+    rows.push(`<tr><td class="k">${k}</td><td class="v">${val}</td></tr>`);
+  };
+
+  // status
+  const loreKeys = Object.keys(obj.lore||{}).filter(k => !isBlank(obj.lore[k]) && !skipField(k));
+  const known = loreKeys.length >= 4; // heuristic
+  add("Status", known ? "Known" : "Unexplored / Unknown");
+
+  // quick identity
+  add("Type", obj.type);
+  add("System Name", obj.system);
+  add("Name", obj.name);
+  if(obj.type === "planet"){
+    add("Planet Name", obj.lore["Planet Name"] || obj.name);
+    add("Star Name", obj.lore["Star Name"] || obj.starName || "");
+    add("Species Name", obj.lore["Species Name"] || obj.species || "");
+    add("Distance from Star (AU)", obj.distAU);
+  } else {
+    add("Star Name", obj.lore["Star Name"] || obj.name);
+    add("Star Spectral Type", obj.lore["Star Spectral Type"]);
+    add("Star Evolutionary Stage", obj.lore["Star Evolutionary Stage"]);
+    add("Star Special Characteristics", obj.lore["Star Special Characteristics"]);
+  }
+
+  // geometry extras
+  if(obj.geom){
+    for(const k of Object.keys(obj.geom)){
+      if(["Type","Name","System Name"].includes(k)) continue;
+      add(k, obj.geom[k]);
+    }
+  }
+
+  // lore (sorted)
+  const loreSorted = Object.keys(obj.lore||{}).sort((a,b)=>a.localeCompare(b));
+  for(const k of loreSorted){
+    if(["System Name","Planet Name","Star Name"].includes(k)) continue;
+    add(k, obj.lore[k]);
+  }
+
+  detailsWrap.innerHTML = `<table>${rows.join("")}</table>`;
+  updateLayers();
+}
+
+function rebuildList(filterText){
+  const t = String(filterText||"").trim().toLowerCase();
+  const items = DATA.all
+    .filter(o => !t || (String(o.name||"").toLowerCase().includes(t) || String(o.system||"").toLowerCase().includes(t) || String(o.species||"").toLowerCase().includes(t) || String(o.lore["Species Name"]||"").toLowerCase().includes(t)))
+    .slice(0, 420);
+
+  listEl.innerHTML = items.map(o => {
+    const sw = `background:${o.color};`;
+    const label = `${o.name || "Unknown"} <span class="small">(${o.type})</span>`;
+    const meta = `${o.system || "Unknown system"}${(o.lore["Species Name"]||o.species) ? " • " + (o.lore["Species Name"]||o.species) : ""}`;
+    return `<div class="listItem" data-id="${o.id}">
+      <div class="swatch" style="${sw}"></div>
+      <div style="min-width:0">
+        <div style="font-size:13px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${label}</div>
+        <div class="small" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${meta}</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  Array.from(listEl.querySelectorAll('.listItem')).forEach(el => {
+    el.onclick = () => {
+      const id = el.getAttribute('data-id');
+      const obj = DATA.all.find(x => x.id === id);
+      if(obj){ zoomTo(obj); renderDetails(obj); }
+    };
+  });
+}
+searchBox.addEventListener('input', (e)=> rebuildList(e.target.value));
+
+function zoomTo(obj){
+  if(!obj || !deckgl) return;
+  const [x,y] = obj.position;
+  viewState2d = {...viewState2d, target:[x,y,0], zoom: Math.max(viewState2d.zoom, 2.2)};
+  deckgl.setProps({viewState: viewState2d});
+}
+
+/* ---------------- orbits ---------------- */
+function circlePath(cx,cy,r,steps=96){
+  const pts = [];
+  for(let i=0;i<=steps;i++){
+    const a = (i/steps) * Math.PI*2;
+    pts.push([cx + r*Math.cos(a), cy + r*Math.sin(a), 0]);
+  }
+  return pts;
+}
+
+/* ---------------- layers ---------------- */
+const WHITE_DIAMOND_SVG = "data:image/svg+xml;utf8," + encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+    <polygon points="32,4 60,32 32,60 4,32" fill="white"/>
+  </svg>`
+);
+
+function updateLayers(){
+  if(!deckgl) return;
+
+  const {ScatterplotLayer, IconLayer, PathLayer, OrthographicView} = deck;
+  const zoom = viewState2d.zoom || 0;
+
+  const starGlow = new ScatterplotLayer({
+    id:'star-glow',
+    data: DATA.stars,
+    visible: showStarGlow,
+    pickable:false,
+    getPosition: d=>d.position,
+    getFillColor: d=> d.rgb.concat([55]),
+    radiusUnits:'pixels',
+    getRadius: d=> 28 + d.sizePx*0.9,
+    stroked:false
+  });
+
+  const starCore = new ScatterplotLayer({
+    id:'star-core',
+    data: DATA.stars,
+    pickable:true,
+    getPosition: d=>d.position,
+    getFillColor: d=> d.rgb.concat([235]),
+    radiusUnits:'pixels',
+    getRadius: d=> 4 + d.sizePx*0.55,
+    stroked:true,
+    getLineColor: [10,16,34,255],
+    lineWidthUnits:'pixels',
+    getLineWidth: 1.0
+  });
+
+  // orbits (selected system only)
+  let orbitLayer = null;
+  if(showOrbitsMode !== "off" && selectedSystem){
+    const star = DATA.stars.find(s => norm(s.system) === norm(selectedSystem) && s.isPrimary) || DATA.stars.find(s => norm(s.system)===norm(selectedSystem)) || null;
+    if(star){
+      const sysPlanets = DATA.planets.filter(p => norm(p.system) === norm(selectedSystem) && p.distAU !== null);
+      const rings = sysPlanets.slice(0,260).map(p => ({path: circlePath(star.position[0], star.position[1], p.distAU*AU_TO_PLOT)}));
+      orbitLayer = new PathLayer({
+        id:'orbits',
+        data: rings,
+        pickable:false,
+        getPath: d=>d.path,
+        getWidth: 1,
+        widthUnits:'pixels',
+        getColor: [18, 30, 70, 130]   // darker rings (as requested)
+      });
+    }
+  }
+
+  // planets: fast diamonds at low zoom
+  const planetDiamonds = new IconLayer({
+    id:'planets-diamond',
+    data: DATA.planets,
+    visible: zoom < ZOOM_TEXTURED,
+    pickable:true,
+    iconAtlas: WHITE_DIAMOND_SVG,
+    iconMapping: {d:{x:0,y:0,width:64,height:64,anchorY:32,anchorX:32}},
+    getIcon: d=>'d',
+    getPosition: d=>d.position,
+    getColor: d=> d.rgb.concat([235]),
+    sizeUnits:'pixels',
+    getSize: d=> 6 + d.sizePx*0.55,
+    billboard:true
+  });
+
+  // planet textures (selected planet always, plus some in selected system when zoomed)
+  let textured = [];
+  if(SELECTED && SELECTED.type==="planet") textured.push(SELECTED);
+  if(selectedSystem && zoom >= ZOOM_TEXTURED){
+    const sys = DATA.planets.filter(p=>norm(p.system)===norm(selectedSystem));
+    for(const p of sys){
+      if(textured.length >= MAX_TEXTURED) break;
+      if(!textured.includes(p)) textured.push(p);
+    }
+  }
+
+  const planetTextures = new IconLayer({
+    id:'planets-texture',
+    data: textured,
+    visible: textured.length > 0,
+    pickable:true,
+    getIcon: d => ({ url: getPlanetIconUrl(d), width: 128, height: 128, anchorX: 64, anchorY: 64 }),
+    sizeUnits:'pixels',
+    getSize: d=> 14 + d.sizePx*0.95,
+    getPosition: d=>d.position,
+    billboard:true
+  });
+
+  const layers = [starGlow, starCore];
+  if(orbitLayer) layers.push(orbitLayer);
+  layers.push(planetDiamonds, planetTextures);
+
+  deckgl.setProps({layers});
+}
+
+function initDeck(){
+  const {Deck, OrthographicView} = deck;
+
+  deckgl = new Deck({
+    canvas: 'deck-canvas',
+    views: [new OrthographicView({id:'2d', controller:true})],
+    initialViewState: viewState2d,
+    controller: true,
+    getCursor: ({isDragging}) => isDragging ? 'grabbing' : 'default',
+    onViewStateChange: ({viewState}) => { viewState2d = viewState; updateLayers(); },
+    onClick: (info) => {
+      if(!info || !info.object){ renderDetails(null); return; }
+      renderDetails(info.object);
+    }
+  });
+
+  updateLayers();
+}
+
+/* ---------------- loading (two CSVs) ---------------- */
+function papaLoad(url){
+  return new Promise((resolve,reject)=>{
+    Papa.parse(url, {
+      header:true,
+      download:true,
+      skipEmptyLines:true,
+      worker:true,
+      downloadRequestHeaders: {}, // (GitHub Pages is same-origin)
+      complete: (res) => resolve(res.data || []),
+      error: (err) => reject(err)
+    });
+  });
+}
+
+function makeLoreIndex(loreRows){
+  const byPlanet = new Map();
+  const byStar = new Map();
+
+  for(const r of loreRows){
+    const sys = norm(r["System Name"] || r["System"] || r["Star System"] || "");
+    const p = norm(r["Planet Name"] || r["Planet"] || "");
+    const s = norm(r["Star Name"] || r["Star"] || "");
+    if(sys && p){
+      const k = sys + "|" + p;
+      if(!byPlanet.has(k)) byPlanet.set(k, r);
+    }
+    if(sys && s){
+      const k = sys + "|" + s;
+      if(!byStar.has(k)) byStar.set(k, r);
+    }
+  }
+
+  // also planet name only fallback (only if unique)
+  const planetNameCount = new Map();
+  for(const r of loreRows){
+    const p = norm(r["Planet Name"] || "");
+    if(!p) continue;
+    planetNameCount.set(p, (planetNameCount.get(p)||0)+1);
+  }
+  const byPlanetName = new Map();
+  for(const r of loreRows){
+    const p = norm(r["Planet Name"] || "");
+    if(p && planetNameCount.get(p)===1) byPlanetName.set(p, r);
+  }
+
+  return {byPlanet, byStar, byPlanetName};
+}
+
+function hashAngle(sys, name){
+  const h = hash01(sys + "|" + name);
+  return h * Math.PI * 2;
+}
+
+function buildObjects(geomRows, loreRows){
+  // indexes for lore
+  const loreIdx = makeLoreIndex(loreRows);
+
+  // detect geometry columns
+  const sample = geomRows && geomRows.length ? geomRows[0] : {};
+  const colType = pickCol(sample, ["Type"]);
+  const colName = pickCol(sample, ["Name"]);
+  const colSys  = pickCol(sample, ["System Name", "System"]);
+  const colStarRank = pickCol(sample, ["Star Size Rank"]);
+  const colPlanetRank = pickCol(sample, ["Planet Size Rank"]);
+  const colDist = pickCol(sample, ["Distance from Star (AU)", "Distance AU", "Dist (AU)"]);
+  const colX = pickCol(sample, ["X", "Xplot", "X Plot"]);
+  const colY = pickCol(sample, ["Y", "Yplot", "Y Plot"]);
+
+  // containers
+  const starsBy = new Map();
+  const planets = [];
+
+  // helper: get primary star within a system by star rank
+  const sysStars = new Map(); // sys -> [{id, rank}]
+  function noteStar(sys, starObj, rank){
+    if(!sysStars.has(sys)) sysStars.set(sys, []);
+    sysStars.get(sys).push({obj: starObj, rank: rank});
+  }
+
+  // pass 1: build from geometry (if present)
+  if(geomRows && geomRows.length && colType && colName && colSys){
+    for(const r of geomRows){
+      const type = norm(r[colType] || "");
+      const name = String(r[colName] || "").trim();
+      const sys  = String(r[colSys] || "").trim() || "Unknown";
+      if(!type || !name) continue;
+
+      const x = safeNum(r[colX]);
+      const y = safeNum(r[colY]);
+      const pos = (x!==null && y!==null) ? [x,y,0] : null;
+
+      if(type === "star"){
+        const key = norm(sys) + "|" + norm(name);
+        if(!starsBy.has(key)){
+          // merge lore for star if exists
+          const lore = loreIdx.byStar.get(norm(sys)+"|"+norm(name)) || {};
+          const loc = parseXY(lore["Star Location"]);
+          const finalPos = pos || (loc ? [loc[0], loc[1], 0] : [0,0,0]);
+
+          const star = {
+            id: "star|" + key,
+            type: "star",
+            name: name,
+            system: sys,
+            species: "",
+            position: finalPos,
+            geom: r,
+            lore: lore || {}
+          };
+          starsBy.set(key, star);
+
+          const rank = safeNum(r[colStarRank]) ?? -1e9;
+          noteStar(norm(sys), star, rank);
+        }
+      }
+
+      if(type === "planet" || type === "moon"){
+        // lore match by system+planet name
+        let lore = loreIdx.byPlanet.get(norm(sys)+"|"+norm(name)) || loreIdx.byPlanetName.get(norm(name)) || {};
+        const loc = parseXY(lore["Planet Location"]);
+        const dist = safeNum(r[colDist]);
+        // if no pos but have dist + primary star, compute ring placement later
+        const planet = {
+          id: (type==="moon"?"moon|":"planet|") + norm(sys) + "|" + norm(name),
+          type: "planet", // treat moons as planets for now visually; can be adjusted later
+          name: name,
+          system: sys,
+          species: String(lore["Species Name"] || "").trim(),
+          position: pos || (loc ? [loc[0], loc[1], 0] : [0,0,0]),
+          distAU: dist,
+          geom: r,
+          lore: lore || {}
+        };
+        planets.push(planet);
+      }
+    }
+  }
+
+  // If geometry missing/empty: build directly from lore
+  if(!planets.length && loreRows && loreRows.length){
+    // stars from lore
+    for(const r of loreRows){
+      const sys = String(r["System Name"] || r["System"] || r["Star System"] || "Unknown").trim();
+      const starName = String(r["Star Name"] || "Star").trim();
+      const key = norm(sys)+"|"+norm(starName);
+      if(!starsBy.has(key)){
+        const loc = parseXY(r["Star Location"]);
+        const star = {
+          id: "star|" + key,
+          type:"star",
+          name: starName || (sys + " Star"),
+          system: sys,
+          species:"",
+          position: loc ? [loc[0],loc[1],0] : [0,0,0],
+          geom: {},
+          lore: r
+        };
+        starsBy.set(key, star);
+        noteStar(norm(sys), star, -1e9);
+      }
+    }
+    // planets from lore
+    for(const r of loreRows){
+      const sys = String(r["System Name"] || r["System"] || r["Star System"] || "Unknown").trim();
+      const pName = String(r["Planet Name"] || "").trim();
+      if(!pName) continue;
+      const loc = parseXY(r["Planet Location"]);
+      planets.push({
+        id: "planet|" + norm(sys) + "|" + norm(pName),
+        type:"planet",
+        name:pName,
+        system:sys,
+        species:String(r["Species Name"]||"").trim(),
+        position: loc ? [loc[0],loc[1],0] : [0,0,0],
+        distAU: null,
+        geom: {},
+        lore: r
+      });
+    }
+  }
+
+  // determine primary star per system
+  for(const [sys, arr] of sysStars.entries()){
+    // highest rank wins
+    let best = null;
+    for(const it of arr){
+      if(!best || (it.rank !== null && it.rank > best.rank)) best = it;
+    }
+    if(best && best.obj) best.obj.isPrimary = true;
+  }
+
+  const stars = Array.from(starsBy.values());
+
+  // place planets on rings if they have distAU and their position looks like default/zero OR equals star
+  // For each planet: compute around primary star of system
+  const primaryBySys = new Map();
+  for(const s of stars){
+    if(s.isPrimary) primaryBySys.set(norm(s.system), s);
+  }
+  for(const p of planets){
+    const ps = primaryBySys.get(norm(p.system));
+    if(ps && p.distAU !== null && p.distAU > 0){
+      // If lore location exists, keep it. If geom has pos, keep it.
+      // If position is [0,0,0] or exactly star position, ring place it.
+      const sameAsStar = (p.position[0]===ps.position[0] && p.position[1]===ps.position[1]);
+      const looksDefault = (p.position[0]===0 && p.position[1]===0);
+      if(sameAsStar || looksDefault){
+        const ang = hashAngle(norm(p.system), norm(p.name));
+        p.position = [ps.position[0] + (p.distAU*AU_TO_PLOT)*Math.cos(ang),
+                      ps.position[1] + (p.distAU*AU_TO_PLOT)*Math.sin(ang),
+                      0];
+      }
+    }
+  }
+
+  // hypercolors: stable sort by system+name
+  const all = stars.concat(planets);
+  all.sort((a,b)=>{
+    const as = norm(a.system).localeCompare(norm(b.system));
+    if(as!==0) return as;
+    return norm(a.name).localeCompare(norm(b.name));
+  });
+  for(let i=0;i<all.length;i++){
+    const hue = (i * GOLDEN_ANGLE) % 360;
+    const isStar = all[i].type === "star";
+    const rgb = hslToRgb(hue, 0.72, isStar ? 0.60 : 0.52);
+    all[i].rgb = rgb;
+    all[i].color = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    all[i].sizePx = isStar ? 14 : 10;
+  }
+
+  // Fit view
+  const xs = all.map(o=>o.position[0]).filter(Number.isFinite);
+  const ys = all.map(o=>o.position[1]).filter(Number.isFinite);
+  let cx=0, cy=0, span=120;
+  if(xs.length && ys.length){
+    const xmin = Math.min(...xs), xmax = Math.max(...xs);
+    const ymin = Math.min(...ys), ymax = Math.max(...ys);
+    cx = (xmin+xmax)/2; cy = (ymin+ymax)/2;
+    span = Math.max(xmax-xmin, ymax-ymin) || 120;
+  }
+  viewState2d = {target:[cx,cy,0], zoom: clamp(3 - Math.log2(span/80 + 1e-9), -1.5, 5), minZoom:-2, maxZoom:10};
+
+  return {stars, planets, all};
+}
+
+async function loadAll(){
+  drawBg();
+  setUnknown();
+
+  statusChip.textContent = "Loading CSVs…";
+
+  let geomRows = [];
+  let loreRows = [];
+
+  // Load lore first (required for book feel)
+  try{
+    statusChip.textContent = "Loading lore…";
+    loreRows = await papaLoad(FILE_LORE + "?v=" + Date.now());
+  } catch(e){
+    console.warn("Lore load failed", e);
+    loreRows = [];
+  }
+
+  // Load geometry (optional but preferred)
+  try{
+    statusChip.textContent = "Loading geometry…";
+    geomRows = await papaLoad(FILE_GEOM + "?v=" + Date.now());
+  } catch(e){
+    console.warn("Geom load failed", e);
+    geomRows = [];
+  }
+
+  if(!geomRows.length && !loreRows.length){
+    statusChip.textContent = "Load failed";
+    detailsWrap.innerHTML = `<div class="small warn">Could not load CSV files. Put <span class="mono">${FILE_GEOM}</span> and/or <span class="mono">${FILE_LORE}</span> in this same folder.</div>`;
+    return;
+  }
+
+  statusChip.textContent = "Building atlas…";
+  DATA = buildObjects(geomRows, loreRows);
+
+  statusChip.textContent = `Loaded: ${DATA.all.length} bodies`;
+  initDeck();
+  rebuildList("");
+
+  // default select first planet (if exists)
+  const first = DATA.planets[0] || DATA.stars[0] || null;
+  if(first){ renderDetails(first); zoomTo(first); }
+}
+
+btnOrbits.onclick = () => {
+  showOrbitsMode = (showOrbitsMode === "off") ? "selected" : "off";
+  btnOrbits.classList.toggle("on", showOrbitsMode !== "off");
+  btnOrbits.textContent = (showOrbitsMode === "off") ? "Orbits: Off" : "Orbits: Selected";
+  updateLayers();
+};
+btnStars.onclick = () => {
+  showStarGlow = !showStarGlow;
+  btnStars.classList.toggle("on", showStarGlow);
+  updateLayers();
+};
+btnReset.onclick = () => {
+  if(!deckgl) return;
+  deckgl.setProps({viewState: viewState2d});
+  updateLayers();
+};
+
+loadAll();
+</script>
+</body>
+</html>
