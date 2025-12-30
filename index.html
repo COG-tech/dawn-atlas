@@ -228,6 +228,37 @@ var n,i=t("./lib/build-log"),a=t("./lib/epsilon"),o=t("./lib/intersecter"),s=t("
     return Number.isFinite(x) ? x : null;
   };
 
+  function computeBounds(rows){
+    let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
+    for (const r of rows){
+      const x = num(col(r, "X"));
+      const y = num(col(r, "Y"));
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      if (x < xmin) xmin = x;
+      if (x > xmax) xmax = x;
+      if (y < ymin) ymin = y;
+      if (y > ymax) ymax = y;
+    }
+    if (!Number.isFinite(xmin)) return null;
+    return {xmin, xmax, ymin, ymax};
+  }
+
+  function quadrantFromXY(x,y){
+    if (!bounds) return null;
+    const {xmin, xmax, ymin, ymax} = bounds;
+    const dx = (xmax - xmin) || 1;
+    const dy = (ymax - ymin) || 1;
+    const cx = Math.min(3, Math.max(0, Math.floor(4 * ((x - xmin) / dx))));
+    const cy = Math.min(3, Math.max(0, Math.floor(4 * ((y - ymin) / dy))));
+    return cy * 4 + cx + 1;
+  }
+
+  function gridFromXY(x,y){
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return `${Math.round(x)}-${Math.round(y)}`;
+  }
+
+
   function hash32(str) {
     let h = 0x811c9dc5;
     for (let i=0;i<str.length;i++) {
@@ -307,6 +338,9 @@ var n,i=t("./lib/build-log"),a=t("./lib/epsilon"),o=t("./lib/intersecter"),s=t("
   let isGlowOn = false;
   let orbitsMode = "selected";
   let selectedId = null;
+  let lastEmpty = null;
+  let bounds = null;
+
 
   // preview texture state
   let tex = null;
@@ -564,22 +598,36 @@ var n,i=t("./lib/build-log"),a=t("./lib/epsilon"),o=t("./lib/intersecter"),s=t("
   ];
   function renderDetails(rec) {
     detailsGrid.innerHTML = "";
+    
     if (!rec) {
       detailsTitle.textContent = "Unknown";
-      detailsSub.textContent = "Unexplored sector";
+      detailsMeta.textContent = "Unexplored sector";
+      detailsNote.textContent = "Tap a star or planet to reveal lore. Tap empty space for coordinates.";
       startPreview("Unknown");
-      for (const [k] of DETAILS_FIELDS) {
-        const kk = document.createElement("div");
-        kk.className = "k";
-        kk.textContent = k;
-        const vv = document.createElement("div");
-        vv.className = "v";
-        vv.textContent = "Unknown";
-        detailsGrid.appendChild(kk);
-        detailsGrid.appendChild(vv);
+
+      const info = lastEmpty;
+      const rows = [];
+      if (info && Number.isFinite(info.x) && Number.isFinite(info.y)) {
+        rows.push(["Coordinates", `${info.x.toFixed(1)}, ${info.y.toFixed(1)}`]);
+        rows.push(["Grid", gridFromXY(info.x, info.y) || "Unknown"]);
+        const q = quadrantFromXY(info.x, info.y);
+        if (q) rows.push(["Quadrant", String(q)]);
+      } else {
+        rows.push(["Coordinates", "Unknown"]);
+        rows.push(["Grid", "Unknown"]);
       }
+
+      rows.push(["Inhabitants", "Unknown"]);
+      rows.push(["Species", "Unknown"]);
+      rows.push(["Faction", "Unknown"]);
+
+      detailsTable.innerHTML = rows
+        .map(([k, v]) => `<div class="row"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`)
+        .join("");
+
       return;
     }
+
 
     detailsTitle.textContent = safe(rec["Name"]);
     detailsSub.textContent = `System: ${safe(rec["System Name"])}`;
@@ -790,8 +838,10 @@ var n,i=t("./lib/build-log"),a=t("./lib/epsilon"),o=t("./lib/intersecter"),s=t("
     return shapes;
   }
 
-  function setSelectedById(id) {
+  function setSelectedById(id, emptyInfo = null) {
     selectedId = id;
+    if (id === null) { lastEmpty = emptyInfo; } else { lastEmpty = null; }
+
     const rec = id ? BY_ID.get(id) : null;
     renderDetails(rec);
 
@@ -861,17 +911,54 @@ var n,i=t("./lib/build-log"),a=t("./lib/epsilon"),o=t("./lib/intersecter"),s=t("
     let pending = null;
     let pointHit = false;
 
-    maskEl.addEventListener("pointerdown", () => {
+    let downInfo = null;
+
+    function pointerToData(ev){
+      try{
+        const gd = plotEl;
+        if (!gd || !gd._fullLayout) return null;
+        const bb = gd.getBoundingClientRect();
+        const xpx = ev.clientX - bb.left;
+        const ypx = ev.clientY - bb.top;
+        const xa = gd._fullLayout.xaxis;
+        const ya = gd._fullLayout.yaxis;
+        const rx = xpx - xa._offset;
+        const ry = ypx - ya._offset;
+        const x = (xa.p2c ? xa.p2c(rx) : (xa.p2l ? xa.p2l(rx) : null));
+        const y = (ya.p2c ? ya.p2c(ry) : (ya.p2l ? ya.p2l(ry) : null));
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+        return {x, y};
+      }catch(_e){
+        return null;
+      }
+    }
+
+    
+    // Empty space tap: show "Unknown" with coordinates (without fighting Plotly click timing)
+    maskEl.addEventListener("pointerdown", (ev) => {
+      downInfo = { cx: ev.clientX, cy: ev.clientY, data: pointerToData(ev) };
       pointHit = false;
-      clearTimeout(pending);
-      pending = setTimeout(() => {
-        if (!pointHit) setSelectedById(null);
-      }, 140);
     });
 
-    plotEl.on("plotly_click", (ev) => {
+    maskEl.addEventListener("pointerup", (ev) => {
+      if (!downInfo) return;
+      const dx = Math.abs(ev.clientX - downInfo.cx);
+      const dy = Math.abs(ev.clientY - downInfo.cy);
+      const data = downInfo.data;
+      downInfo = null;
+
+      if (dx <= 4 && dy <= 4) {
+        clearTimeout(pending);
+        pending = setTimeout(() => {
+          if (!pointHit) setSelectedById(null, data);
+        }, 260);
+      }
+    });
+
+plotEl.on("plotly_click", (ev) => {
       pointHit = true;
       clearTimeout(pending);
+      setTimeout(() => { pointHit = false; }, 350);
       const pt = ev?.points?.[0];
       if (!pt || !pt.customdata || pt.customdata.length < 6) return;
       setSelectedById(pt.customdata[5]);
@@ -936,6 +1023,8 @@ var n,i=t("./lib/build-log"),a=t("./lib/epsilon"),o=t("./lib/intersecter"),s=t("
 
       const text = await res.text();
       ALL = parseCSV(text);
+      bounds = computeBounds(ALL);
+
 
       BY_ID.clear();
       for (let i=0;i<ALL.length;i++) {
