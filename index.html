@@ -140,7 +140,8 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
   const GRID_OFF = "rgba(150,170,210,0.00)";
   const AXIS = "rgba(231,238,249,0.18)";
   const ORBIT_SCALE = 2.2;
-  const ORBIT_GAP = 14;
+  const ORBIT_GAP = 1.6;
+  const ORBIT_MAX_FRACTION = 0.45;
   const ORBIT_LINE = "rgba(124,195,255,0.32)";
 
   const pill = document.getElementById("pill");
@@ -487,6 +488,23 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
     return anchors;
   }
 
+  function computeSystemSpacing(anchors) {
+    const items = Array.from(anchors.entries());
+    const spacing = new Map();
+    for (let i=0;i<items.length;i++) {
+      const [sysA, a] = items[i];
+      let min = Infinity;
+      for (let j=0;j<items.length;j++) {
+        if (i === j) continue;
+        const [, b] = items[j];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (d < min) min = d;
+      }
+      spacing.set(sysA, Number.isFinite(min) ? min : 0);
+    }
+    return spacing;
+  }
+
   function calcOrbitRadius(row) {
     const au = num(col(row, "Distance from Star (AU)"));
     const orbitNum = num(col(row, "Orbit Number"));
@@ -505,7 +523,11 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
   function applyOrbitLayout(rows) {
     SYSTEM_ANCHORS = buildSystemAnchors(rows);
     SYSTEM_ORBITS.clear();
+    SYSTEM_SCALE.clear();
+    SYSTEM_MAX_ORBIT.clear();
 
+    const systemSpacing = computeSystemSpacing(SYSTEM_ANCHORS);
+    const maxBaseBySystem = new Map();
     const planetsBySystem = new Map();
     for (const r of rows) {
       const type = safe(col(r, "Type")).toLowerCase();
@@ -513,11 +535,30 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
       const sys = safe(col(r, "System Name"));
       r.__orbit = null;
       r.__orbitBase = calcOrbitRadius(r);
+      if (Number.isFinite(r.__orbitBase)) {
+        const prev = maxBaseBySystem.get(sys);
+        if (!Number.isFinite(prev) || r.__orbitBase > prev) {
+          maxBaseBySystem.set(sys, r.__orbitBase);
+        }
+      }
       if (!planetsBySystem.has(sys)) planetsBySystem.set(sys, []);
       planetsBySystem.get(sys).push(r);
     }
 
+    for (const [sys, maxBase] of maxBaseBySystem.entries()) {
+      const minDist = systemSpacing.get(sys);
+      let scale = 1;
+      if (Number.isFinite(maxBase) && maxBase > 0 && Number.isFinite(minDist) && minDist > 0) {
+        const maxAllowed = minDist * ORBIT_MAX_FRACTION;
+        scale = Math.min(1, maxAllowed / maxBase);
+      }
+      if (!Number.isFinite(scale) || scale <= 0) scale = 1;
+      SYSTEM_SCALE.set(sys, Math.max(0.05, scale));
+    }
+
     for (const [sys, items] of planetsBySystem.entries()) {
+      const scale = SYSTEM_SCALE.get(sys) ?? 1;
+      const gap = ORBIT_GAP * scale;
       items.sort((a, b) => {
         const ra = a.__orbitBase;
         const rb = b.__orbitBase;
@@ -533,11 +574,14 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
           r.__orbit = null;
           continue;
         }
-        if (last !== null && radius < last + ORBIT_GAP) {
-          radius = last + ORBIT_GAP;
+        radius *= scale;
+        if (last !== null && radius < last + gap) {
+          radius = last + gap;
         }
         r.__orbit = radius;
         last = radius;
+        const prevMax = SYSTEM_MAX_ORBIT.get(sys) || 0;
+        if (radius > prevMax) SYSTEM_MAX_ORBIT.set(sys, radius);
       }
     }
 
@@ -619,6 +663,8 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
   let BY_ID = new Map();
   let SYSTEM_ANCHORS = new Map();
   let SYSTEM_ORBITS = new Map();
+  let SYSTEM_SCALE = new Map();
+  let SYSTEM_MAX_ORBIT = new Map();
   let bounds = null;
   let selectedId = null;
   let isGridOn = true;
@@ -755,7 +801,12 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
     const x = Number.isFinite(row.__x) ? row.__x : num(col(row, "X"));
     const y = Number.isFinite(row.__y) ? row.__y : num(col(row, "Y"));
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    const span = Math.max((bounds.xmax - bounds.xmin), (bounds.ymax - bounds.ymin)) * 0.12;
+    const system = safe(col(row, "System Name"));
+    const systemMax = SYSTEM_MAX_ORBIT.get(system);
+    let span = Math.max((bounds.xmax - bounds.xmin), (bounds.ymax - bounds.ymin)) * 0.12;
+    if (Number.isFinite(systemMax)) {
+      span = Math.max(systemMax * 1.8, 12);
+    }
     Plotly.relayout(plotEl, {
       "xaxis.range": [x - span, x + span],
       "yaxis.range": [y - span, y + span]
