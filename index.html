@@ -69,7 +69,9 @@
     box-shadow: 0 0 18px rgba(90,169,255,.25);
   }
   .title{ font-weight:700; letter-spacing:.3px; }
-  .pill{
+  .input{width:100%; box-sizing:border-box; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background:rgba(10,18,34,0.65); color:#e8ecf1; outline:none;}
+.input:focus{border-color:rgba(120,170,255,0.55); box-shadow:0 0 0 2px rgba(80,130,255,0.15);}
+.pill{
     font-size:12px; color:var(--muted);
     padding:4px 8px; border:1px solid var(--stroke);
     border-radius:999px; background:rgba(7,12,22,.55);
@@ -248,7 +250,8 @@
 
     <div class="card">
       <h3>Find</h3>
-      <div class="sub">Quick jump list. Updates as you type.</div>
+      <div class="sub">Type below (or use the top search). Click a result to jump.</div>
+      <input id="findBox" class="input" type="text" placeholder="Search name, system, classification..." autocomplete="off" />
       <ul class="list" id="results"></ul>
     </div>
   </aside>
@@ -972,11 +975,10 @@
       x: PLANETS.map(r=>r._xplot),
       y: PLANETS.map(r=>r._yplot),
       text: PLANETS.map(r=>r._name),
-      customdata: PLANETS.map(r=>r._id),
+      customdata: PLANETS.map(r=> [r._id, (Number.isFinite(r._dist) ? r._dist.toFixed(2) : "")]),
       marker:{ size: PLANETS.map(r=>r._ms*0.92), color: PLANETS.map(r=>r._color), line:{width:0.8, color:"rgba(10,70,55,0.45)"}, symbol: "diamond" },
-      hovertemplate:"<b>%{text}</b><br>System: %{meta}<br>AU: %{customdata2}<extra></extra>",
+      hovertemplate:"<b>%{text}</b><br>System: %{meta}<br>AU: %{customdata[1]}<extra></extra>",
       meta: PLANETS.map(r=>r._sys.trim()),
-      customdata2: PLANETS.map(r=> Number.isFinite(r._dist) ? r._dist.toFixed(2) : ""),
       showlegend:false
     };
 
@@ -1139,7 +1141,8 @@
       statusEl.style.color = "#bfe5ff";
 
       plotEl.on("plotly_click", (ev) => {
-        const id = ev?.points?.[0]?.customdata;
+        const cd = ev?.points?.[0]?.customdata;
+        const id = Array.isArray(cd) ? cd[0] : cd;
         if (id === undefined || id === null) return;
         showDetailsById(Number(id));
         window.__pointClicked = true;
@@ -1233,7 +1236,8 @@
     setUnknown(null);
     showToast("Reset");
   });
-  qEl.addEventListener("input", () => buildSearchList(qEl.value));
+  qEl.addEventListener("input", () => { if (findBoxEl) findBoxEl.value = qEl.value; buildSearchList(qEl.value); });
+  if (findBoxEl){ findBoxEl.addEventListener("input", () => { qEl.value = findBoxEl.value; buildSearchList(findBoxEl.value); }); }
 
   load();
 })();
