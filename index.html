@@ -139,6 +139,8 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
   const GRID_ON = "rgba(150,170,210,0.22)";
   const GRID_OFF = "rgba(150,170,210,0.00)";
   const AXIS = "rgba(231,238,249,0.18)";
+  const ORBIT_SCALE = 2.2;
+  const ORBIT_LINE = "rgba(124,195,255,0.32)";
 
   const pill = document.getElementById("pill");
   const plotEl = document.getElementById("plot");
@@ -197,19 +199,150 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
     toastEl._t = setTimeout(() => toastEl.style.display = "none", 2300);
   }
 
-  function drawPreview(key) {
+  const previewState = {
+    key: null,
+    texture: null,
+    phase: 0,
+    speed: 0.00006,
+    type: "planet"
+  };
+  let previewAnimId = null;
+  let previewLast = 0;
+
+  function makeRng(seed) {
+    let s = seed >>> 0;
+    return () => {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 4294967295;
+    };
+  }
+
+  function makePlanetTexture(key, type) {
+    const seed = hash32(String(key));
+    const isStar = String(type || "").toLowerCase().includes("star");
+    const tw = 256;
+    const th = 128;
+    const canvas = document.createElement("canvas");
+    canvas.width = tw;
+    canvas.height = th;
+    const ctx = canvas.getContext("2d");
+    const rng = makeRng(seed ^ 0x9e3779b9);
+    const baseHue = seed % 360;
+    const bandCount = 2 + (seed % 3);
+
+    for (let y=0;y<th;y++) {
+      const t = y / (th - 1);
+      const band = Math.sin(t * Math.PI * 2 * bandCount) * 0.5 + 0.5;
+      const hue = (baseHue + band * 30 + (isStar ? 20 : 0)) % 360;
+      const sat = isStar ? 75 : 55;
+      const light = isStar ? 55 + band * 25 : 30 + band * 25;
+      ctx.fillStyle = `hsl(${hue}, ${sat}%, ${light}%)`;
+      ctx.fillRect(0, y, tw, 1);
+    }
+
+    ctx.globalAlpha = isStar ? 0.25 : 0.18;
+    for (let i=0;i<1200;i++) {
+      const x = Math.floor(rng() * tw);
+      const y = Math.floor(rng() * th);
+      const w = 1 + Math.floor(rng() * 3);
+      const h = 1 + Math.floor(rng() * 2);
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.fillRect(x, y, w, h);
+    }
+    ctx.globalAlpha = 0.2;
+    for (let i=0;i<300;i++) {
+      const x = Math.floor(rng() * tw);
+      const y = Math.floor(rng() * th);
+      const w = 2 + Math.floor(rng() * 6);
+      const h = 1 + Math.floor(rng() * 3);
+      ctx.fillStyle = "rgba(0,0,0,0.6)";
+      ctx.fillRect(x, y, w, h);
+    }
+    ctx.globalAlpha = 1;
+
+    return canvas;
+  }
+
+  function setPreviewTarget(key, type) {
+    const k = String(key || "Unknown");
+    if (previewState.key !== k || !previewState.texture) {
+      previewState.key = k;
+      previewState.texture = makePlanetTexture(k, type);
+      previewState.phase = 0;
+    }
+    previewState.type = String(type || "");
+    previewState.speed = previewState.type.toLowerCase().includes("star") ? 0.00002 : 0.00006;
+    if (!previewAnimId) {
+      previewLast = 0;
+      previewAnimId = requestAnimationFrame(animatePreview);
+    }
+  }
+
+  function drawPlanetFrame() {
     const w = preview.width;
     const h = preview.height;
+    const r = Math.min(w, h) / 2 - 4;
+    const cx = w / 2;
+    const cy = h / 2;
     pctx.clearRect(0, 0, w, h);
-    const hue = hash32(String(key)) % 360;
-    const grad = pctx.createRadialGradient(w*0.35, h*0.3, 2, w*0.45, h*0.5, w*0.6);
-    grad.addColorStop(0, `hsl(${hue}, 70%, 72%)`);
-    grad.addColorStop(0.6, `hsl(${(hue+25)%360}, 65%, 45%)`);
-    grad.addColorStop(1, "rgba(5,10,18,0.2)");
-    pctx.fillStyle = grad;
+
+    const tex = previewState.texture;
+    if (!tex) return;
+
+    pctx.save();
     pctx.beginPath();
-    pctx.arc(w/2, h/2, Math.min(w,h)/2 - 4, 0, Math.PI*2);
+    pctx.arc(cx, cy, r, 0, Math.PI * 2);
+    pctx.clip();
+
+    const scale = (r * 2) / tex.height;
+    const drawW = tex.width * scale;
+    const drawH = tex.height * scale;
+    const offset = (previewState.phase * tex.width) % tex.width;
+    const startX = cx - r - offset * scale;
+    const startY = cy - r;
+
+    pctx.drawImage(tex, startX, startY, drawW, drawH);
+    pctx.drawImage(tex, startX + drawW, startY, drawW, drawH);
+    pctx.restore();
+
+    const lightX = cx - r * 0.35;
+    const lightY = cy - r * 0.35;
+    const glow = pctx.createRadialGradient(lightX, lightY, r * 0.15, cx, cy, r);
+    glow.addColorStop(0, "rgba(255,255,255,0.55)");
+    glow.addColorStop(0.55, "rgba(255,255,255,0.0)");
+    glow.addColorStop(1, "rgba(0,0,0,0.55)");
+    pctx.fillStyle = glow;
+    pctx.beginPath();
+    pctx.arc(cx, cy, r, 0, Math.PI * 2);
     pctx.fill();
+
+    const terminator = pctx.createLinearGradient(cx - r, cy, cx + r, cy);
+    terminator.addColorStop(0, "rgba(0,0,0,0.45)");
+    terminator.addColorStop(0.6, "rgba(0,0,0,0.0)");
+    terminator.addColorStop(1, "rgba(0,0,0,0.2)");
+    pctx.fillStyle = terminator;
+    pctx.beginPath();
+    pctx.arc(cx, cy, r, 0, Math.PI * 2);
+    pctx.fill();
+
+    pctx.strokeStyle = "rgba(124,195,255,0.28)";
+    pctx.lineWidth = 1.4;
+    pctx.beginPath();
+    pctx.arc(cx, cy, r + 0.5, 0, Math.PI * 2);
+    pctx.stroke();
+  }
+
+  function animatePreview(ts) {
+    if (!previewState.texture) {
+      previewAnimId = requestAnimationFrame(animatePreview);
+      return;
+    }
+    if (!previewLast) previewLast = ts;
+    const dt = Math.min(40, ts - previewLast);
+    previewLast = ts;
+    previewState.phase = (previewState.phase + dt * previewState.speed) % 1;
+    drawPlanetFrame();
+    previewAnimId = requestAnimationFrame(animatePreview);
   }
 
   function renderDetails(row) {
@@ -217,7 +350,7 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
       detailsTitle.textContent = "Unknown";
       detailsSub.textContent = "Unexplored sector";
       detailsGrid.innerHTML = "";
-      drawPreview("Unknown");
+      setPreviewTarget("Unknown", "Unknown");
       return;
     }
     const name = safe(col(row, "Name"));
@@ -249,7 +382,7 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
       `<div class="k">${k}</div><div class="v">${v}</div>`
     ).join("");
 
-    drawPreview(name + "|" + system);
+    setPreviewTarget(name + "|" + system, type);
   }
 
   function parseCSV(text) {
@@ -313,8 +446,8 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
   function computeBounds(rows) {
     let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
     for (const r of rows) {
-      const x = num(col(r, "X"));
-      const y = num(col(r, "Y"));
+      const x = Number.isFinite(r.__x) ? r.__x : num(col(r, "X"));
+      const y = Number.isFinite(r.__y) ? r.__y : num(col(r, "Y"));
       if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
       if (x < xmin) xmin = x;
       if (x > xmax) xmax = x;
@@ -323,6 +456,112 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
     }
     if (!Number.isFinite(xmin)) return null;
     return { xmin, xmax, ymin, ymax };
+  }
+
+  function buildSystemAnchors(rows) {
+    const anchors = new Map();
+    for (const r of rows) {
+      const sys = safe(col(r, "System Name"));
+      const type = safe(col(r, "Type")).toLowerCase();
+      const x = num(col(r, "X"));
+      const y = num(col(r, "Y"));
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      if (!type.includes("star")) continue;
+      const rank = num(col(r, "Star Size Rank"));
+      const rankVal = Number.isFinite(rank) ? rank : -Infinity;
+      const existing = anchors.get(sys);
+      if (!existing || rankVal > existing.rank) {
+        anchors.set(sys, { x, y, rank: rankVal });
+      }
+    }
+    for (const r of rows) {
+      const sys = safe(col(r, "System Name"));
+      if (anchors.has(sys)) continue;
+      const x = num(col(r, "X"));
+      const y = num(col(r, "Y"));
+      if (Number.isFinite(x) && Number.isFinite(y)) {
+        anchors.set(sys, { x, y, rank: -Infinity });
+      }
+    }
+    return anchors;
+  }
+
+  function calcOrbitRadius(row) {
+    const au = num(col(row, "Distance from Star (AU)"));
+    const orbitNum = num(col(row, "Orbit Number"));
+    const base = Number.isFinite(au) ? au : (Number.isFinite(orbitNum) ? orbitNum : null);
+    if (!Number.isFinite(base)) return null;
+    return Math.max(0.5, base * ORBIT_SCALE);
+  }
+
+  function orbitAngle(row, system) {
+    const name = safe(col(row, "Name"));
+    const orbitNum = num(col(row, "Orbit Number")) || 0;
+    const seed = hash32(`${system}|${name}`);
+    return (seed % 360) * (Math.PI / 180) + orbitNum * 0.45;
+  }
+
+  function applyOrbitLayout(rows) {
+    SYSTEM_ANCHORS = buildSystemAnchors(rows);
+    SYSTEM_ORBITS.clear();
+
+    for (const r of rows) {
+      const baseX = num(col(r, "X"));
+      const baseY = num(col(r, "Y"));
+      const sys = safe(col(r, "System Name"));
+      const anchor = SYSTEM_ANCHORS.get(sys);
+      const ax = anchor ? anchor.x : baseX;
+      const ay = anchor ? anchor.y : baseY;
+      const type = safe(col(r, "Type")).toLowerCase();
+
+      r.__orbit = null;
+      if (type.includes("planet")) {
+        const radius = calcOrbitRadius(r);
+        if (Number.isFinite(radius) && Number.isFinite(ax) && Number.isFinite(ay)) {
+          const ang = orbitAngle(r, sys);
+          r.__x = ax + Math.cos(ang) * radius;
+          r.__y = ay + Math.sin(ang) * radius;
+          r.__orbit = radius;
+          if (!SYSTEM_ORBITS.has(sys)) SYSTEM_ORBITS.set(sys, new Set());
+          SYSTEM_ORBITS.get(sys).add(radius);
+        } else {
+          r.__x = baseX;
+          r.__y = baseY;
+        }
+      } else {
+        r.__x = baseX;
+        r.__y = baseY;
+      }
+    }
+  }
+
+  function buildOrbitShapes(system) {
+    const anchor = SYSTEM_ANCHORS.get(system);
+    if (!anchor) return [];
+    const set = SYSTEM_ORBITS.get(system);
+    if (!set || !set.size) return [];
+    const radii = Array.from(set).sort((a, b) => a - b);
+    return radii.map((r) => ({
+      type: "circle",
+      xref: "x",
+      yref: "y",
+      x0: anchor.x - r,
+      x1: anchor.x + r,
+      y0: anchor.y - r,
+      y1: anchor.y + r,
+      line: { color: ORBIT_LINE, width: 1, dash: "dot" },
+      fillcolor: "rgba(0,0,0,0)",
+      layer: "below"
+    }));
+  }
+
+  function updateOrbitRings(row) {
+    if (orbitsMode !== "selected" || !row) {
+      Plotly.relayout(plotEl, { shapes: [] });
+      return;
+    }
+    const system = safe(col(row, "System Name"));
+    Plotly.relayout(plotEl, { shapes: buildOrbitShapes(system) });
   }
 
   async function fetchWithTimeout(url, timeoutMs) {
@@ -350,6 +589,8 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
 
   let ALL = [];
   let BY_ID = new Map();
+  let SYSTEM_ANCHORS = new Map();
+  let SYSTEM_ORBITS = new Map();
   let bounds = null;
   let selectedId = null;
   let isGridOn = true;
@@ -367,8 +608,8 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
 
     for (let i=0;i<ALL.length;i++) {
       const r = ALL[i];
-      const x = num(col(r, "X"));
-      const y = num(col(r, "Y"));
+      const x = Number.isFinite(r.__x) ? r.__x : num(col(r, "X"));
+      const y = Number.isFinite(r.__y) ? r.__y : num(col(r, "Y"));
       if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
 
       const name = safe(col(r, "Name"));
@@ -485,8 +726,8 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
 
   function zoomTo(row) {
     if (!row || !bounds) return;
-    const x = num(col(row, "X"));
-    const y = num(col(row, "Y"));
+    const x = Number.isFinite(row.__x) ? row.__x : num(col(row, "X"));
+    const y = Number.isFinite(row.__y) ? row.__y : num(col(row, "Y"));
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
     const span = Math.max((bounds.xmax - bounds.xmin), (bounds.ymax - bounds.ymin)) * 0.12;
     Plotly.relayout(plotEl, {
@@ -500,19 +741,22 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
     if (!id) {
       Plotly.restyle(plotEl, { x: [[]], y: [[]] }, [2]);
       renderDetails(null);
+      updateOrbitRings(null);
       return;
     }
     const row = BY_ID.get(id);
     if (!row) {
       renderDetails(null);
+      updateOrbitRings(null);
       return;
     }
-    const x = num(col(row, "X"));
-    const y = num(col(row, "Y"));
+    const x = Number.isFinite(row.__x) ? row.__x : num(col(row, "X"));
+    const y = Number.isFinite(row.__y) ? row.__y : num(col(row, "Y"));
     if (Number.isFinite(x) && Number.isFinite(y)) {
       Plotly.restyle(plotEl, { x: [[x]], y: [[y]] }, [2]);
     }
     renderDetails(row);
+    updateOrbitRings(row);
   }
 
   function updateFindList(q) {
@@ -536,7 +780,7 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
       const item = document.createElement("div");
       item.className = "findItem";
       item.innerHTML = `<div class="findName">${safe(col(r, "Name"))}</div>
-                        <div class="findMeta">${safe(col(r, "Type"))} ? ${safe(col(r, "System Name"))} ? ${safe(col(r, "Classification"))}</div>`;
+                        <div class="findMeta">${safe(col(r, "Type"))} | ${safe(col(r, "System Name"))} | ${safe(col(r, "Classification"))}</div>`;
       item.addEventListener("click", () => {
         setSelectedById(r.__id);
         zoomTo(r);
@@ -592,6 +836,7 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
         btnOrbits.classList.add("toggled");
         btnOrbits.textContent = "Orbits: Selected";
       }
+      updateOrbitRings(selectedId ? BY_ID.get(selectedId) : null);
     });
 
     btnReset.addEventListener("click", () => {
@@ -614,6 +859,7 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
       const text = await loadCsvText();
       ALL = parseCSV(text);
       if (!ALL.length) throw new Error("No rows found in CSV");
+      applyOrbitLayout(ALL);
       bounds = computeBounds(ALL);
 
       BY_ID.clear();
