@@ -228,6 +228,18 @@ var n,i=t("./lib/build-log"),a=t("./lib/epsilon"),o=t("./lib/intersecter"),s=t("
     return Number.isFinite(x) ? x : null;
   };
 
+  // Safe column accessor (case-insensitive)
+  function col(row, key){
+    if (!row) return "";
+    if (Object.prototype.hasOwnProperty.call(row, key)) return row[key];
+    const want = String(key).trim().toLowerCase();
+    for (const k in row){
+      if (String(k).trim().toLowerCase() === want) return row[k];
+    }
+    return "";
+  }
+
+
   function computeBounds(rows){
     let xmin = Infinity, xmax = -Infinity, ymin = Infinity, ymax = -Infinity;
     for (const r of rows){
