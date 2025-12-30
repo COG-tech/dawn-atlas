@@ -140,6 +140,7 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
   const GRID_OFF = "rgba(150,170,210,0.00)";
   const AXIS = "rgba(231,238,249,0.18)";
   const ORBIT_SCALE = 2.2;
+  const ORBIT_GAP = 6;
   const ORBIT_LINE = "rgba(124,195,255,0.32)";
 
   const pill = document.getElementById("pill");
@@ -505,6 +506,41 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
     SYSTEM_ANCHORS = buildSystemAnchors(rows);
     SYSTEM_ORBITS.clear();
 
+    const planetsBySystem = new Map();
+    for (const r of rows) {
+      const type = safe(col(r, "Type")).toLowerCase();
+      if (!type.includes("planet")) continue;
+      const sys = safe(col(r, "System Name"));
+      r.__orbit = null;
+      r.__orbitBase = calcOrbitRadius(r);
+      if (!planetsBySystem.has(sys)) planetsBySystem.set(sys, []);
+      planetsBySystem.get(sys).push(r);
+    }
+
+    for (const [sys, items] of planetsBySystem.entries()) {
+      items.sort((a, b) => {
+        const ra = a.__orbitBase;
+        const rb = b.__orbitBase;
+        if (!Number.isFinite(ra) && !Number.isFinite(rb)) return 0;
+        if (!Number.isFinite(ra)) return 1;
+        if (!Number.isFinite(rb)) return -1;
+        return ra - rb;
+      });
+      let last = null;
+      for (const r of items) {
+        let radius = r.__orbitBase;
+        if (!Number.isFinite(radius)) {
+          r.__orbit = null;
+          continue;
+        }
+        if (last !== null && radius < last + ORBIT_GAP) {
+          radius = last + ORBIT_GAP;
+        }
+        r.__orbit = radius;
+        last = radius;
+      }
+    }
+
     for (const r of rows) {
       const baseX = num(col(r, "X"));
       const baseY = num(col(r, "Y"));
@@ -514,20 +550,12 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
       const ay = anchor ? anchor.y : baseY;
       const type = safe(col(r, "Type")).toLowerCase();
 
-      r.__orbit = null;
-      if (type.includes("planet")) {
-        const radius = calcOrbitRadius(r);
-        if (Number.isFinite(radius) && Number.isFinite(ax) && Number.isFinite(ay)) {
-          const ang = orbitAngle(r, sys);
-          r.__x = ax + Math.cos(ang) * radius;
-          r.__y = ay + Math.sin(ang) * radius;
-          r.__orbit = radius;
-          if (!SYSTEM_ORBITS.has(sys)) SYSTEM_ORBITS.set(sys, new Set());
-          SYSTEM_ORBITS.get(sys).add(radius);
-        } else {
-          r.__x = baseX;
-          r.__y = baseY;
-        }
+      if (type.includes("planet") && Number.isFinite(r.__orbit) && Number.isFinite(ax) && Number.isFinite(ay)) {
+        const ang = orbitAngle(r, sys);
+        r.__x = ax + Math.cos(ang) * r.__orbit;
+        r.__y = ay + Math.sin(ang) * r.__orbit;
+        if (!SYSTEM_ORBITS.has(sys)) SYSTEM_ORBITS.set(sys, new Set());
+        SYSTEM_ORBITS.get(sys).add(r.__orbit);
       } else {
         r.__x = baseX;
         r.__y = baseY;
