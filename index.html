@@ -8,33 +8,40 @@
 :root{
   --bg:#060A12;
   --panel:#0B1424;
-  --stroke:rgba(170,190,220,.14);
-  --stroke2:rgba(170,190,220,.10);
+  --panel2:#101B2D;
+  --stroke:rgba(180,205,235,.20);
+  --stroke2:rgba(180,205,235,.12);
   --text:#E7EEF9;
-  --muted:rgba(231,238,249,.70);
-  --grid:rgba(150,170,210,.22);
+  --muted:rgba(231,238,249,.74);
+  --grid:rgba(160,190,225,.27);
   --accent:#7CC3FF;
+  --accent2:#FFD166;
+  --danger:#FF5C7A;
+  --focus:rgba(255,209,102,.92);
 }
 *{box-sizing:border-box}
-html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 0%, rgba(30,70,140,.28), rgba(6,10,18,0) 60%), linear-gradient(180deg, #060A12, #050812); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
-#app{height:100%; display:grid; grid-template-columns: 1fr 360px; gap:12px; padding:12px;}
+html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 20% 0%, rgba(30,70,140,.28), rgba(6,10,18,0) 60%), linear-gradient(180deg, #060A12, #050812); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
+#app{min-height:100vh; display:grid; grid-template-columns: minmax(0,1fr) minmax(320px,360px); gap:12px; padding:12px;}
 #left{min-width:0; display:flex; flex-direction:column; gap:10px;}
-#topbar{display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--stroke); background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); border-radius:14px;}
-#brand{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.2px;}
-#pill{font-size:12px; padding:4px 8px; border-radius:999px; background:rgba(255,255,255,.08); border:1px solid var(--stroke2); color:var(--muted);}
-.btn{appearance:none; border:1px solid var(--stroke); background:rgba(255,255,255,.04); color:var(--text); padding:7px 10px; border-radius:10px; font-weight:650; font-size:13px; cursor:pointer;}
-.btn:hover{background:rgba(255,255,255,.07)}
+#topbar{display:flex; align-items:center; flex-wrap:wrap; gap:10px; padding:10px 12px; border:1px solid var(--stroke); background:linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.025)); border-radius:10px;}
+#brand{display:flex; align-items:center; gap:10px; min-width:220px; font-weight:800; letter-spacing:0;}
+#brandMark{width:18px; height:18px; border-radius:6px; background:linear-gradient(135deg,#7CC3FF,#FFD166); opacity:.95; flex:0 0 auto;}
+#pill{font-size:12px; padding:4px 8px; border-radius:7px; background:rgba(255,255,255,.08); border:1px solid var(--stroke2); color:var(--muted);}
+#controls{display:flex; align-items:center; flex-wrap:wrap; gap:8px;}
+.btn{appearance:none; border:1px solid var(--stroke); background:rgba(255,255,255,.045); color:var(--text); padding:8px 10px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; min-height:36px;}
+.btn:hover{background:rgba(255,255,255,.085)}
 .btn:active{transform:translateY(1px)}
-.btn.toggled{background:rgba(124,195,255,.14); border-color:rgba(124,195,255,.28)}
-#searchWrap{margin-left:auto; display:flex; align-items:center; gap:8px; min-width:300px;}
-#search{width:100%; padding:9px 12px; border-radius:999px; border:1px solid var(--stroke); background:rgba(10,18,34,.70); color:var(--text); outline:none;}
+.btn.toggled{background:rgba(124,195,255,.18); border-color:rgba(124,195,255,.42); box-shadow:inset 0 0 0 1px rgba(124,195,255,.10)}
+.btn:focus-visible,#search:focus-visible,.findItem:focus-visible{outline:2px solid var(--focus); outline-offset:2px;}
+#searchWrap{margin-left:auto; display:flex; align-items:center; gap:8px; flex:1 1 260px; min-width:220px; max-width:520px;}
+#search{width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--stroke); background:rgba(10,18,34,.78); color:var(--text);}
 #search::placeholder{color:rgba(231,238,249,.45)}
-#plotWrap{flex:1; min-height:420px; border:1px solid var(--stroke); border-radius:16px; overflow:hidden; background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,0)); position:relative;}
+#plotWrap{flex:1; min-height:420px; border:1px solid var(--stroke); border-radius:10px; overflow:hidden; background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,0)); position:relative;}
 #plot{width:100%; height:100%; background:var(--bg);}
 #plotMask{position:absolute; inset:0; pointer-events:auto;}
 #toast{position:absolute; left:14px; bottom:14px; padding:10px 12px; border-radius:12px; background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.12); color:rgba(231,238,249,.92); font-size:12px; display:none;}
 #right{display:flex; flex-direction:column; gap:12px; min-width:0;}
-.panel{border:1px solid var(--stroke); border-radius:16px; background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); padding:12px;}
+.panel{border:1px solid var(--stroke); border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.022)); padding:12px;}
 .panel h3{margin:0 0 8px 0; font-size:14px; letter-spacing:.2px; color:rgba(231,238,249,.88)}
 .small{font-size:12px; color:var(--muted)}
 .legendRow{display:flex; align-items:center; gap:10px; padding:7px 8px; border-top:1px solid var(--stroke2);}
@@ -47,19 +54,42 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
 .cap:after{content:""; position:absolute; inset:2px; border:2px solid rgba(124,195,255,.55); border-radius:999px}
 .conf{width:12px; height:12px; border-radius:999px; border:2px dashed rgba(255,92,122,.95); background:transparent}
 #detailsHeader{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;}
-#preview{width:86px; height:86px; border-radius:14px; border:1px solid var(--stroke); background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.18), rgba(0,0,0,0) 60%), rgba(10,18,34,.60);}
-#detailsGrid{display:grid; grid-template-columns: 1fr 1fr; gap:6px 10px; font-size:12px;}
+#preview{width:86px; height:86px; border-radius:10px; border:1px solid var(--stroke); background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.18), rgba(0,0,0,0) 60%), rgba(10,18,34,.60); flex:0 0 auto;}
+#detailsGrid{display:grid; grid-template-columns: minmax(92px,.7fr) minmax(0,1.3fr); gap:7px 10px; font-size:12px;}
 .k{color:rgba(231,238,249,.62)}
-.v{color:rgba(231,238,249,.92); font-weight:650; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.v{color:rgba(231,238,249,.92); font-weight:650; text-align:right; overflow-wrap:anywhere;}
 .hr{height:1px; background:var(--stroke2); margin:10px 0}
-#findList{max-height:240px; overflow:auto; margin-top:8px; border-radius:12px; border:1px solid var(--stroke2);}
-.findItem{padding:9px 10px; border-top:1px solid var(--stroke2); cursor:pointer;}
+#findList{max-height:260px; overflow:auto; margin-top:8px; border-radius:10px; border:1px solid var(--stroke2);}
+.findItem{display:block; width:100%; padding:9px 10px; border:0; border-top:1px solid var(--stroke2); background:transparent; color:var(--text); text-align:left; cursor:pointer;}
 .findItem:first-child{border-top:0}
 .findItem:hover{background:rgba(255,255,255,.05)}
 .findName{font-weight:750; font-size:12px}
 .findMeta{font-size:11px; color:var(--muted)}
+.emptyState{padding:10px; color:var(--muted); font-size:12px;}
 @media (max-width: 980px) {
-  #app{grid-template-columns: 1fr;}
+  #app{grid-template-columns: 1fr; height:auto;}
+  #right{display:grid; grid-template-columns: repeat(3, minmax(0,1fr));}
+  #topbar{align-items:stretch;}
+  #brand{flex:1 1 100%;}
+  #controls{flex:1 1 auto;}
+  #searchWrap{margin-left:0; max-width:none;}
+  #plotWrap{min-height:58vh;}
+}
+@media (max-width: 720px) {
+  #app{padding:8px; gap:8px;}
+  #topbar{gap:8px; padding:9px;}
+  #controls{display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); width:100%;}
+  .btn{width:100%; padding:8px;}
+  #searchWrap{flex-basis:100%; min-width:0;}
+  #right{display:flex;}
+  #plotWrap{min-height:52vh;}
+  #detailsGrid{grid-template-columns: 1fr;}
+  .v{text-align:left;}
+}
+@media (max-width: 420px) {
+  #brand{min-width:0;}
+  #pill{margin-left:auto;}
+  .panel{padding:10px;}
 }
 </style>
 </head>
@@ -68,18 +98,20 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
   <div id="left">
     <div id="topbar">
       <div id="brand">
-        <div style="width:18px;height:18px;border-radius:6px;background:linear-gradient(135deg,#7CC3FF,#C27CFF); opacity:.9"></div>
+        <div id="brandMark" aria-hidden="true"></div>
         <div>Dawn Galaxy Atlas</div>
-        <div id="pill">Loading data...</div>
+        <div id="pill" role="status" aria-live="polite">Loading data...</div>
       </div>
 
-      <button id="btnOrbits" class="btn toggled" title="Show orbit rings for the selected system">Orbits: Selected</button>
-      <button id="btnGlow" class="btn" title="Add a soft glow layer to stars">Star glow</button>
-      <button id="btnGrid" class="btn toggled" title="Toggle the grid">Grid</button>
-      <button id="btnReset" class="btn" title="Reset view">Reset</button>
+      <div id="controls" aria-label="Map controls">
+        <button id="btnOrbits" class="btn toggled" type="button" aria-pressed="true" title="Show orbit rings for the selected system">Orbits: Selected</button>
+        <button id="btnGlow" class="btn" type="button" aria-pressed="false" title="Add a soft glow layer to stars">Star glow</button>
+        <button id="btnGrid" class="btn toggled" type="button" aria-pressed="true" title="Toggle the grid">Grid</button>
+        <button id="btnReset" class="btn" type="button" title="Reset view and clear selection">Reset</button>
+      </div>
 
       <div id="searchWrap">
-        <input id="search" type="text" placeholder="Search name, system, classification..."/>
+        <input id="search" type="search" autocomplete="off" aria-label="Search atlas objects" placeholder="Search name, system, classification..."/>
       </div>
     </div>
 
@@ -105,7 +137,7 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
     <div class="panel">
       <div id="detailsHeader">
         <h3 style="margin:0">Details</h3>
-        <div class="small">Tap empty space for Unknown.</div>
+        <div class="small">Click empty map space to clear.</div>
       </div>
 
       <div style="display:flex; gap:10px; align-items:flex-start">
@@ -122,7 +154,7 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
 
     <div class="panel">
       <h3>Find</h3>
-      <div class="small">Use the top search. Tap a result to jump.</div>
+      <div class="small">Use the top search. Select a result to jump.</div>
       <div id="findList"></div>
     </div>
   </div>
@@ -136,9 +168,9 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
   const CSV_URL = "./dawn_atlas.csv";
 
   const BG = "#060A12";
-  const GRID_ON = "rgba(150,170,210,0.22)";
+  const GRID_ON = "rgba(160,190,225,0.27)";
   const GRID_OFF = "rgba(150,170,210,0.00)";
-  const AXIS = "rgba(231,238,249,0.18)";
+  const AXIS = "rgba(231,238,249,0.24)";
   const ORBIT_SCALE = 2.2;
   const ORBIT_GAP = 1.6;
   const ORBIT_MAX_FRACTION = 0.45;
@@ -162,6 +194,7 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
   const detailsGrid = document.getElementById("detailsGrid");
   const preview = document.getElementById("preview");
   const pctx = preview.getContext("2d", { willReadFrequently: true });
+  const reducedMotionQuery = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
 
   const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
   const safe = (v) => (v === undefined || v === null || String(v).trim() === "" || String(v).trim() === "-") ? "Unknown" : String(v);
@@ -199,6 +232,20 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
     toastEl.style.display = "block";
     clearTimeout(toastEl._t);
     toastEl._t = setTimeout(() => toastEl.style.display = "none", 2300);
+  }
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) {
+      node.textContent = text;
+      node.title = text;
+    }
+    return node;
+  }
+
+  function setEmptyFindMessage(text) {
+    findList.replaceChildren(el("div", "emptyState", text));
   }
 
   const previewState = {
@@ -274,6 +321,10 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
     }
     previewState.type = String(type || "");
     previewState.speed = previewState.type.toLowerCase().includes("star") ? 0.00002 : 0.00006;
+    if (reducedMotionQuery && reducedMotionQuery.matches) {
+      drawPlanetFrame();
+      return;
+    }
     if (!previewAnimId) {
       previewLast = 0;
       previewAnimId = requestAnimationFrame(animatePreview);
@@ -335,6 +386,11 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
   }
 
   function animatePreview(ts) {
+    if (reducedMotionQuery && reducedMotionQuery.matches) {
+      previewAnimId = null;
+      drawPlanetFrame();
+      return;
+    }
     if (!previewState.texture) {
       previewAnimId = requestAnimationFrame(animatePreview);
       return;
@@ -351,7 +407,7 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
     if (!row) {
       detailsTitle.textContent = "Unknown";
       detailsSub.textContent = "Unexplored sector";
-      detailsGrid.innerHTML = "";
+      detailsGrid.replaceChildren();
       setPreviewTarget("Unknown", "Unknown");
       return;
     }
@@ -380,9 +436,12 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
       ["Habitability", habitability]
     ];
 
-    detailsGrid.innerHTML = fields.map(([k,v]) =>
-      `<div class="k">${k}</div><div class="v">${v}</div>`
-    ).join("");
+    const nodes = [];
+    for (const [k, v] of fields) {
+      nodes.push(el("div", "k", k));
+      nodes.push(el("div", "v", v));
+    }
+    detailsGrid.replaceChildren(...nodes);
 
     setPreviewTarget(name + "|" + system, type);
   }
@@ -651,7 +710,7 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
 
   async function loadCsvText() {
     try {
-      const res = await fetchWithTimeout(CSV_URL, 3000);
+      const res = await fetchWithTimeout(CSV_URL, 10000);
       if (!res.ok) throw new Error(`CSV load failed (${res.status})`);
       return await res.text();
     } catch (err) {
@@ -671,6 +730,16 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
   let isGlowOn = false;
   let orbitsMode = "selected";
   let clickedPoint = false;
+
+  function syncControlState() {
+    btnGrid.classList.toggle("toggled", isGridOn);
+    btnGrid.setAttribute("aria-pressed", String(isGridOn));
+    btnGlow.classList.toggle("toggled", isGlowOn);
+    btnGlow.setAttribute("aria-pressed", String(isGlowOn));
+    btnOrbits.classList.toggle("toggled", orbitsMode === "selected");
+    btnOrbits.setAttribute("aria-pressed", String(orbitsMode === "selected"));
+    btnOrbits.textContent = orbitsMode === "selected" ? "Orbits: Selected" : "Orbits: Off";
+  }
 
   function buildTraces() {
     const xs = [];
@@ -838,8 +907,11 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
 
   function updateFindList(q) {
     const query = (q || "").trim().toLowerCase();
-    findList.innerHTML = "";
-    if (!query) return;
+    findList.replaceChildren();
+    if (!query) {
+      setEmptyFindMessage("Enter a search term to list matching objects.");
+      return;
+    }
 
     const rows = [];
     for (const r of ALL) {
@@ -853,17 +925,38 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
       if (rows.length >= 40) break;
     }
 
+    if (!rows.length) {
+      setEmptyFindMessage("No matching objects found.");
+      return;
+    }
+
     for (const r of rows) {
-      const item = document.createElement("div");
+      const item = document.createElement("button");
       item.className = "findItem";
-      item.innerHTML = `<div class="findName">${safe(col(r, "Name"))}</div>
-                        <div class="findMeta">${safe(col(r, "Type"))} | ${safe(col(r, "System Name"))} | ${safe(col(r, "Classification"))}</div>`;
+      item.type = "button";
+      const name = safe(col(r, "Name"));
+      const meta = `${safe(col(r, "Type"))} | ${safe(col(r, "System Name"))} | ${safe(col(r, "Classification"))}`;
+      item.append(el("div", "findName", name), el("div", "findMeta", meta));
       item.addEventListener("click", () => {
         setSelectedById(r.__id);
         zoomTo(r);
       });
       findList.appendChild(item);
     }
+  }
+
+  function resetAtlasView() {
+    selectedId = null;
+    search.value = "";
+    updateFindList("");
+    renderDetails(null);
+    updateOrbitRings(null);
+    Plotly.restyle(plotEl, { x: [[]], y: [[]] }, [2]);
+    Plotly.relayout(plotEl, {
+      "xaxis.autorange": true,
+      "yaxis.autorange": true,
+      shapes: []
+    });
   }
 
   function hookEvents() {
@@ -888,7 +981,7 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
 
     btnGrid.addEventListener("click", () => {
       isGridOn = !isGridOn;
-      btnGrid.classList.toggle("toggled", isGridOn);
+      syncControlState();
       Plotly.relayout(plotEl, {
         "xaxis.showgrid": isGridOn,
         "yaxis.showgrid": isGridOn,
@@ -899,28 +992,22 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
 
     btnGlow.addEventListener("click", () => {
       isGlowOn = !isGlowOn;
-      btnGlow.classList.toggle("toggled", isGlowOn);
+      syncControlState();
       Plotly.restyle(plotEl, { visible: isGlowOn }, [0]);
     });
 
     btnOrbits.addEventListener("click", () => {
       if (orbitsMode === "selected") {
         orbitsMode = "off";
-        btnOrbits.classList.remove("toggled");
-        btnOrbits.textContent = "Orbits: Off";
       } else {
         orbitsMode = "selected";
-        btnOrbits.classList.add("toggled");
-        btnOrbits.textContent = "Orbits: Selected";
       }
+      syncControlState();
       updateOrbitRings(selectedId ? BY_ID.get(selectedId) : null);
     });
 
     btnReset.addEventListener("click", () => {
-      Plotly.relayout(plotEl, {
-        "xaxis.autorange": true,
-        "yaxis.autorange": true
-      });
+      resetAtlasView();
     });
 
     search.addEventListener("input", () => updateFindList(search.value));
@@ -948,13 +1035,17 @@ html,body{height:100%; margin:0; background: radial-gradient(900px 520px at 20% 
 
       const traces = buildTraces();
       await Plotly.newPlot(plotEl, traces, baseLayout(), {
-        displayModeBar: false,
+        displayModeBar: true,
+        displaylogo: false,
+        modeBarButtonsToRemove: ["lasso2d", "select2d", "toggleSpikelines", "hoverCompareCartesian"],
         responsive: true,
         scrollZoom: true
       });
 
       pill.textContent = "Ready";
       hookEvents();
+      syncControlState();
+      updateFindList("");
       setSelectedById(null);
     } catch (err) {
       pill.textContent = "Error";
