@@ -305,7 +305,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     if (!row) return "";
     return Object.keys(row)
       .filter((k) => !String(k).startsWith("__"))
-      .map((k) => `${k} ${row[k]}`)
+      .map((k) => row[k])
       .join(" ")
       .toLowerCase();
   }
