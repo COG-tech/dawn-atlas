@@ -52,6 +52,9 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
 .legendRow:hover{background:rgba(255,255,255,.05)}
 .legendRow.active{background:rgba(124,195,255,.12); box-shadow:inset 3px 0 0 rgba(124,195,255,.72)}
 .legendRow:focus-visible{outline:2px solid var(--focus); outline-offset:2px;}
+.legendRow:disabled{cursor:not-allowed; opacity:.45;}
+.legendRow:disabled:hover{background:transparent;}
+.legendCount{margin-left:auto; color:rgba(231,238,249,.46); font-size:11px; font-weight:700;}
 .dot{width:10px; height:10px; border-radius:999px; background:#F6D68A; box-shadow:0 0 10px rgba(246,214,138,.35)}
 .diamond{width:10px; height:10px; transform:rotate(45deg); background:#6FCBFF}
 .moon{width:7px; height:7px; border-radius:999px; background:#91A4BC}
@@ -1156,18 +1159,39 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     btnOrbits.textContent = orbitsMode === "selected" ? "Orbits: On" : "Orbits: Off";
     for (const button of legendButtons) {
       const isActive = button.dataset.filter === activeLegendFilter;
+      const count = countLegendMatches(button.dataset.filter);
+      const label = button.dataset.label || button.querySelector(".small")?.textContent.trim() || button.textContent.trim();
       button.classList.toggle("active", isActive);
+      button.disabled = count === 0;
       button.setAttribute("aria-pressed", String(isActive));
-      button.title = isActive ? "Tap again to show all atlas objects" : `Show only ${button.textContent.trim()}`;
+      button.title = count === 0 ? `No ${label.toLowerCase()} in this atlas data` : (isActive ? "Tap again to show all atlas objects" : `Show only ${label}`);
+      const text = button.querySelector(".small");
+      if (text) text.textContent = label;
+      let countNode = button.querySelector(".legendCount");
+      if (!countNode) {
+        countNode = document.createElement("span");
+        countNode.className = "legendCount";
+        button.appendChild(countNode);
+      }
+      countNode.textContent = count;
     }
   }
 
-  function matchesLegendFilter(row) {
-    if (!activeLegendFilter) return true;
+  function countLegendMatches(filter) {
+    if (!filter || !ALL.length) return ALL.length;
+    let count = 0;
+    for (const row of ALL) {
+      if (matchesLegendFilter(row, filter)) count++;
+    }
+    return count;
+  }
+
+  function matchesLegendFilter(row, filter = activeLegendFilter) {
+    if (!filter) return true;
     const info = row.__info || classifyRow(row);
     const objectType = safe(col(row, "Object_Type")).toUpperCase();
     const visualClass = safe(col(row, "Visual_Class")).toUpperCase();
-    switch (activeLegendFilter) {
+    switch (filter) {
       case "stars":
         return (objectType === "STAR" || info.isStar) && !info.isBlackHole && !info.isWormhole && !info.isRift && !info.isPulsar && !info.isMagnetar && !info.isDyson;
       case "planets":
@@ -1490,7 +1514,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     renderDetails(null);
     updateOrbitRings(null);
     syncControlState();
-    await Plotly.react(plotEl, buildTraces(), plotEl.layout, PLOT_CONFIG);
+    await Plotly.react(plotEl, buildTraces(), baseLayout(), PLOT_CONFIG);
     updateMapLabels(null);
     Plotly.restyle(plotEl, { x: [[]], y: [[]] }, [TRACE.selected]);
     Plotly.relayout(plotEl, {
@@ -1554,11 +1578,16 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
 
     for (const button of legendButtons) {
       button.addEventListener("click", async () => {
+        const count = countLegendMatches(button.dataset.filter);
+        if (count === 0) {
+          toast(`No ${button.querySelector(".small")?.textContent.trim() || "objects"} in this atlas data`);
+          return;
+        }
         const nextFilter = button.dataset.filter;
         activeLegendFilter = activeLegendFilter === nextFilter ? null : nextFilter;
         syncControlState();
         await refreshMapForFilter();
-        toast(activeLegendFilter ? `Showing ${button.textContent.trim()} only` : "Showing all atlas objects");
+        toast(activeLegendFilter ? `Showing ${button.querySelector(".small")?.textContent.trim() || "selection"} only` : "Showing all atlas objects");
       });
     }
 
