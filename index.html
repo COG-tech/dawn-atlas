@@ -371,7 +371,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     else if (isCapital || /nexus|power/.test(bag)) visualClass = "NEXUS_WORLD";
     else if (isSacred) visualClass = "SACRED_WORLD";
     else if (isOcean && isPlanet) visualClass = "OCEAN_WORLD";
-    const canonLabel = isBook1 ? "Book 1 Locked" : (isExpansion ? "Post-Book 1 Expansion" : (isCanon ? "Canon Locked" : "Unverified"));
+    const canonLabel = isBook1 ? "Canon Locked" : (isExpansion ? "Post-Book 1 Expansion" : (isCanon ? "Canon Locked" : "Unverified"));
     const group = isConflict ? "restricted" : (tier === 1 ? "major" : (isMoon ? "moon" : (isStar ? "star" : "planet")));
     return { type, isStar, isPlanet, isMoon, isCanon, isBook1, isExpansion, canonLabel, isCapital, isHomeworld, isConflict, isMystery, isBlackHole, isWormhole, isPulsar, isMagnetar, isDyson, isRift, tier, tierName, visualClass, group };
   }
@@ -740,7 +740,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     if (!row) {
       detailsTitle.textContent = "No object selected";
       detailsSub.textContent = "Select a star, planet, or moon.";
-      detailsTags.replaceChildren(el("span", "tag", "Atlas Online"), el("span", "tag", "Book 1 Synced"));
+      detailsTags.replaceChildren(el("span", "tag", "Atlas Online"));
       detailsGrid.replaceChildren(el("div", "emptyState", "Select an object to view system details, canon status, classification, story role, and related worlds."));
       setEmptyPanel(quickFacts, "No object selected.");
       renderRelated(null);
@@ -1620,8 +1620,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
       const traces = buildTraces();
       await Plotly.newPlot(plotEl, traces, baseLayout(), PLOT_CONFIG);
 
-      const hasBook1 = ALL.some((row) => classifyRow(row).isBook1);
-      pill.textContent = hasBook1 ? "Book 1 Locked" : "Atlas Online";
+      pill.textContent = "Atlas Online";
       hookEvents();
       syncControlState();
       updateFindList("");
