@@ -17,6 +17,7 @@
   --accent:#7CC3FF;
   --accent2:#FFD166;
   --danger:#FF5C7A;
+  --violet:#B58CFF;
   --focus:rgba(255,209,102,.92);
 }
 *{box-sizing:border-box}
@@ -36,7 +37,9 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
 #searchWrap{margin-left:auto; display:flex; align-items:center; gap:8px; flex:1 1 260px; min-width:220px; max-width:520px;}
 #search{width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--stroke); background:rgba(10,18,34,.78); color:var(--text);}
 #search::placeholder{color:rgba(231,238,249,.45)}
-#plotWrap{flex:1; min-height:420px; border:1px solid var(--stroke); border-radius:10px; overflow:hidden; background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,0)); position:relative;}
+#plotWrap{flex:1; min-height:420px; border:1px solid var(--stroke); border-radius:10px; overflow:hidden; background:radial-gradient(520px 320px at 18% 28%, rgba(124,195,255,.10), rgba(6,10,18,0) 70%), radial-gradient(420px 300px at 78% 64%, rgba(181,140,255,.09), rgba(6,10,18,0) 72%), linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,0)); position:relative;}
+#plotWrap:before{content:""; position:absolute; inset:0; pointer-events:none; background-image:radial-gradient(circle, rgba(231,238,249,.22) 0 1px, transparent 1.4px), radial-gradient(circle, rgba(124,195,255,.16) 0 1px, transparent 1.6px); background-size:80px 80px, 130px 130px; background-position:12px 24px, 50px 70px; opacity:.18;}
+#plotWrap:after{content:""; position:absolute; inset:0; pointer-events:none; box-shadow:inset 0 0 80px rgba(0,0,0,.45);}
 #plot{width:100%; height:100%; background:var(--bg);}
 #plotMask{position:absolute; inset:0; pointer-events:auto;}
 #toast{position:absolute; left:14px; bottom:14px; padding:10px 12px; border-radius:12px; background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.12); color:rgba(231,238,249,.92); font-size:12px; display:none;}
@@ -44,28 +47,42 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
 .panel{border:1px solid var(--stroke); border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.022)); padding:12px;}
 .panel h3{margin:0 0 8px 0; font-size:14px; letter-spacing:.2px; color:rgba(231,238,249,.88)}
 .small{font-size:12px; color:var(--muted)}
-.legendRow{display:flex; align-items:center; gap:10px; padding:7px 8px; border-top:1px solid var(--stroke2);}
+.legendRow{display:flex; align-items:center; gap:10px; padding:6px 8px; border-top:1px solid var(--stroke2);}
 .legendRow:first-of-type{border-top:0}
-.dot{width:10px; height:10px; border-radius:999px; background:rgba(255,255,255,.8)}
-.diamond{width:10px; height:10px; transform:rotate(45deg); background:rgba(255,255,255,.85)}
-.moon{width:6px; height:6px; border-radius:999px; background:rgba(255,255,255,.8)}
+.dot{width:10px; height:10px; border-radius:999px; background:#F6D68A; box-shadow:0 0 10px rgba(246,214,138,.35)}
+.diamond{width:10px; height:10px; transform:rotate(45deg); background:#6FCBFF}
+.moon{width:7px; height:7px; border-radius:999px; background:#91A4BC}
 .halo{width:12px; height:12px; border-radius:999px; border:2px solid rgba(124,195,255,.85); background:transparent}
-.cap{width:12px; height:12px; border-radius:999px; border:2px solid rgba(124,195,255,.85); background:transparent; position:relative}
-.cap:after{content:""; position:absolute; inset:2px; border:2px solid rgba(124,195,255,.55); border-radius:999px}
+.cap{width:12px; height:12px; border-radius:999px; border:2px solid rgba(255,209,102,.95); background:transparent; position:relative}
+.cap:after{content:""; position:absolute; inset:2px; border:2px solid rgba(255,209,102,.62); border-radius:999px}
 .conf{width:12px; height:12px; border-radius:999px; border:2px dashed rgba(255,92,122,.95); background:transparent}
+.mystery{width:12px; height:12px; border-radius:999px; background:rgba(181,140,255,.72); box-shadow:0 0 12px rgba(181,140,255,.45)}
 #detailsHeader{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;}
+#detailsTitle{font-weight:800; font-size:16px; color:rgba(231,238,249,.96)}
+#detailsSub{margin-top:3px; color:var(--muted)}
 #preview{width:86px; height:86px; border-radius:10px; border:1px solid var(--stroke); background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.18), rgba(0,0,0,0) 60%), rgba(10,18,34,.60); flex:0 0 auto;}
 #detailsGrid{display:grid; grid-template-columns: minmax(92px,.7fr) minmax(0,1.3fr); gap:7px 10px; font-size:12px;}
+#quickFacts{display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:8px;}
+.fact{border:1px solid var(--stroke2); border-radius:8px; padding:8px; background:rgba(255,255,255,.035);}
+.factKey{font-size:10px; color:rgba(231,238,249,.56); text-transform:uppercase; letter-spacing:.04em;}
+.factVal{font-size:12px; color:rgba(231,238,249,.94); font-weight:750; margin-top:3px; overflow-wrap:anywhere;}
 .k{color:rgba(231,238,249,.62)}
 .v{color:rgba(231,238,249,.92); font-weight:650; text-align:right; overflow-wrap:anywhere;}
 .hr{height:1px; background:var(--stroke2); margin:10px 0}
 #findList{max-height:260px; overflow:auto; margin-top:8px; border-radius:10px; border:1px solid var(--stroke2);}
 .findItem{display:block; width:100%; padding:9px 10px; border:0; border-top:1px solid var(--stroke2); background:transparent; color:var(--text); text-align:left; cursor:pointer;}
 .findItem:first-child{border-top:0}
-.findItem:hover{background:rgba(255,255,255,.05)}
+.findItem:hover,.relatedItem:hover{background:rgba(255,255,255,.05)}
 .findName{font-weight:750; font-size:12px}
 .findMeta{font-size:11px; color:var(--muted)}
-.emptyState{padding:10px; color:var(--muted); font-size:12px;}
+.emptyState{padding:10px; color:var(--muted); font-size:12px; grid-column:1/-1;}
+.tagRow{display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:8px;}
+.tag{border:1px solid var(--stroke2); border-radius:999px; padding:3px 7px; color:rgba(231,238,249,.82); background:rgba(255,255,255,.045); font-size:11px;}
+#relatedList{display:flex; flex-direction:column; max-height:220px; overflow:auto; border:1px solid var(--stroke2); border-radius:10px;}
+.relatedItem{appearance:none; border:0; border-top:1px solid var(--stroke2); background:transparent; color:var(--text); text-align:left; padding:8px 10px; cursor:pointer;}
+.relatedItem:first-child{border-top:0}
+.relatedName{font-size:12px; font-weight:750;}
+.relatedMeta{font-size:11px; color:var(--muted); margin-top:2px;}
 @media (max-width: 980px) {
   #app{grid-template-columns: 1fr; height:auto;}
   #right{display:grid; grid-template-columns: repeat(3, minmax(0,1fr));}
@@ -85,6 +102,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
   #plotWrap{min-height:52vh;}
   #detailsGrid{grid-template-columns: 1fr;}
   .v{text-align:left;}
+  #quickFacts{grid-template-columns: 1fr;}
 }
 @media (max-width: 420px) {
   #brand{min-width:0;}
@@ -124,32 +142,43 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
 
   <div id="right">
     <div class="panel">
-      <h3>Micro legend</h3>
-      <div class="legendRow"><div class="dot"></div><div class="small" style="flex:1">Star</div></div>
-      <div class="legendRow"><div class="diamond"></div><div class="small" style="flex:1">Planet</div></div>
-      <div class="legendRow"><div class="moon"></div><div class="small" style="flex:1">Moon (if present)</div></div>
-      <div class="legendRow"><div class="halo"></div><div class="small" style="flex:1">Homeworld (halo, if tagged)</div></div>
-      <div class="legendRow"><div class="cap"></div><div class="small" style="flex:1">Capital (double halo, if tagged)</div></div>
-      <div class="legendRow"><div class="conf"></div><div class="small" style="flex:1">Conflict / restricted (dashed ring, if tagged)</div></div>
-      <div class="small" style="margin-top:8px">Colors are unique per object.</div>
-    </div>
-
-    <div class="panel">
       <div id="detailsHeader">
-        <h3 style="margin:0">Details</h3>
+        <h3 style="margin:0">Selected Object</h3>
         <div class="small">Click empty map space to clear.</div>
       </div>
 
       <div style="display:flex; gap:10px; align-items:flex-start">
         <canvas id="preview" width="86" height="86"></canvas>
         <div style="flex:1">
-          <div class="small" id="detailsTitle" style="font-weight:750; font-size:13px; color:rgba(231,238,249,.92)">Unknown</div>
-          <div class="small" id="detailsSub" style="margin-top:2px">Unexplored sector</div>
+          <div id="detailsTitle">No object selected</div>
+          <div class="small" id="detailsSub">Select a star, planet, or moon.</div>
+          <div id="detailsTags" class="tagRow"></div>
         </div>
       </div>
 
       <div class="hr"></div>
       <div id="detailsGrid"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Quick Facts</h3>
+      <div id="quickFacts"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Same System</h3>
+      <div id="relatedList"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Legend</h3>
+      <div class="legendRow"><div class="dot"></div><div class="small" style="flex:1">Stars</div></div>
+      <div class="legendRow"><div class="diamond"></div><div class="small" style="flex:1">Planets</div></div>
+      <div class="legendRow"><div class="moon"></div><div class="small" style="flex:1">Moons</div></div>
+      <div class="legendRow"><div class="halo"></div><div class="small" style="flex:1">Core / homeworld</div></div>
+      <div class="legendRow"><div class="cap"></div><div class="small" style="flex:1">Capital / canon locked</div></div>
+      <div class="legendRow"><div class="conf"></div><div class="small" style="flex:1">Conflict / restricted</div></div>
+      <div class="legendRow"><div class="mystery"></div><div class="small" style="flex:1">Mystery / unknown</div></div>
     </div>
 
     <div class="panel">
@@ -168,7 +197,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
   const CSV_URL = "./dawn_atlas.csv";
 
   const BG = "#060A12";
-  const GRID_ON = "rgba(160,190,225,0.27)";
+  const GRID_ON = "rgba(160,190,225,0.18)";
   const GRID_OFF = "rgba(150,170,210,0.00)";
   const AXIS = "rgba(231,238,249,0.24)";
   const ORBIT_SCALE = 2.2;
@@ -191,7 +220,10 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
 
   const detailsTitle = document.getElementById("detailsTitle");
   const detailsSub = document.getElementById("detailsSub");
+  const detailsTags = document.getElementById("detailsTags");
   const detailsGrid = document.getElementById("detailsGrid");
+  const quickFacts = document.getElementById("quickFacts");
+  const relatedList = document.getElementById("relatedList");
   const preview = document.getElementById("preview");
   const pctx = preview.getContext("2d", { willReadFrequently: true });
   const reducedMotionQuery = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
@@ -222,11 +254,6 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     return h >>> 0;
   }
 
-  function hueColor(key) {
-    const h = hash32(key) % 360;
-    return `hsl(${h}, 78%, 62%)`;
-  }
-
   function toast(msg) {
     toastEl.textContent = msg;
     toastEl.style.display = "block";
@@ -246,6 +273,75 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
 
   function setEmptyFindMessage(text) {
     findList.replaceChildren(el("div", "emptyState", text));
+  }
+
+  function setEmptyPanel(node, text) {
+    node.replaceChildren(el("div", "emptyState", text));
+  }
+
+  function textBag(row) {
+    if (!row) return "";
+    return Object.keys(row)
+      .filter((k) => !String(k).startsWith("__"))
+      .map((k) => `${k} ${row[k]}`)
+      .join(" ")
+      .toLowerCase();
+  }
+
+  function classifyRow(row) {
+    const type = safe(col(row, "Type"));
+    const typeLower = type.toLowerCase();
+    const bag = textBag(row);
+    const canon = safe(col(row, "Canon_Status"));
+    const isStar = typeLower.includes("star");
+    const isPlanet = typeLower.includes("planet");
+    const isMoon = typeLower.includes("moon");
+    const isCanon = /book1|canon|locked|verified|fixed/.test(`${canon} ${bag}`);
+    const isCapital = /capital/.test(bag);
+    const isHomeworld = /homeworld/.test(bag);
+    const isConflict = /conflict|restricted|war|forbidden/.test(bag);
+    const isMystery = /unknown|unexplored|mystery|hidden|nihility/.test(bag);
+    let tier = 3;
+    let tierName = "Tier 3 Background";
+    if (isMystery) {
+      tier = 4;
+      tierName = "Tier 4 Mystery";
+    }
+    if (isConflict) {
+      tier = 2;
+      tierName = "Tier 2 Strategic";
+    }
+    if (isCanon || isCapital || isHomeworld) {
+      tier = 1;
+      tierName = "Tier 1 Core Canon";
+    }
+    const group = isConflict ? "restricted" : (tier === 1 ? "major" : (isMoon ? "moon" : (isStar ? "star" : "planet")));
+    return { type, isStar, isPlanet, isMoon, isCanon, isCapital, isHomeworld, isConflict, isMystery, tier, tierName, group };
+  }
+
+  function markerFor(row) {
+    const info = row.__info || classifyRow(row);
+    if (info.group === "restricted") {
+      return { color: "#FF5C7A", size: info.tier === 1 ? 15 : 12, symbol: "circle-open-dot", opacity: 0.82, line: { color: "rgba(255,92,122,0.95)", width: 2 } };
+    }
+    if (info.group === "major") {
+      const color = info.isCapital || info.isCanon ? "#FFD166" : "#7CC3FF";
+      return { color, size: info.isStar ? 15 : 13, symbol: info.isPlanet ? "diamond" : "circle", opacity: 0.95, line: { color: "rgba(255,255,255,0.82)", width: 1.5 } };
+    }
+    if (info.isMystery) {
+      return { color: "#B58CFF", size: 9, symbol: "circle", opacity: 0.55, line: { color: "rgba(181,140,255,0.55)", width: 1 } };
+    }
+    if (info.isMoon) {
+      return { color: "#91A4BC", size: 5, symbol: "circle-open", opacity: 0.45, line: { color: "rgba(145,164,188,0.42)", width: 1 } };
+    }
+    if (info.isPlanet) {
+      return { color: "#6FCBFF", size: 7, symbol: "diamond", opacity: 0.56, line: { color: "rgba(111,203,255,0.34)", width: 1 } };
+    }
+    return { color: "#F6D68A", size: 8, symbol: "circle", opacity: 0.52, line: { color: "rgba(246,214,138,0.34)", width: 1 } };
+  }
+
+  function hoverText(row) {
+    return `${safe(col(row, "Name"))} | ${safe(col(row, "Type"))} | ${safe(col(row, "System Name"))} | ${safe(col(row, "Classification"))}`;
   }
 
   const previewState = {
@@ -405,16 +501,22 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
 
   function renderDetails(row) {
     if (!row) {
-      detailsTitle.textContent = "Unknown";
-      detailsSub.textContent = "Unexplored sector";
-      detailsGrid.replaceChildren();
+      detailsTitle.textContent = "No object selected";
+      detailsSub.textContent = "Select a star, planet, or moon.";
+      detailsTags.replaceChildren(el("span", "tag", "Atlas Online"), el("span", "tag", "Book 1 Synced"));
+      detailsGrid.replaceChildren(el("div", "emptyState", "Select an object to view system details, canon status, classification, story tier, and related worlds."));
+      setEmptyPanel(quickFacts, "No object selected.");
+      renderRelated(null);
       setPreviewTarget("Unknown", "Unknown");
       return;
     }
+    const info = row.__info || classifyRow(row);
     const name = safe(col(row, "Name"));
     const system = safe(col(row, "System Name"));
     const type = safe(col(row, "Type"));
     const classification = safe(col(row, "Classification"));
+    const canonStatus = safe(col(row, "Canon_Status"));
+    const canonName = safe(col(row, "Canon_Name"));
     const x = num(col(row, "X"));
     const y = num(col(row, "Y"));
     const grid = safe(col(row, "Grid Position"));
@@ -423,7 +525,13 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     const habitability = safe(col(row, "Habitability"));
 
     detailsTitle.textContent = name;
-    detailsSub.textContent = system;
+    detailsSub.textContent = `${type} in ${system}`;
+    const tags = [info.tierName];
+    if (info.isCanon) tags.push("Canon locked");
+    if (info.isCapital) tags.push("Capital");
+    if (info.isHomeworld) tags.push("Homeworld");
+    if (info.isConflict) tags.push("Restricted");
+    detailsTags.replaceChildren(...tags.map((tag) => el("span", "tag", tag)));
 
     const coords = (Number.isFinite(x) && Number.isFinite(y)) ? `${x}, ${y}` : "Unknown";
     const fields = [
@@ -433,7 +541,10 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
       ["Type", type],
       ["System", systemType],
       ["Classification", classification],
-      ["Habitability", habitability]
+      ["Canon", canonStatus],
+      ["Canon Name", canonName],
+      ["Habitability", habitability],
+      ["Story Tier", info.tierName]
     ];
 
     const nodes = [];
@@ -443,7 +554,61 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     }
     detailsGrid.replaceChildren(...nodes);
 
+    renderQuickFacts(row);
+    renderRelated(row);
     setPreviewTarget(name + "|" + system, type);
+  }
+
+  function renderQuickFacts(row) {
+    if (!row) {
+      setEmptyPanel(quickFacts, "No object selected.");
+      return;
+    }
+    const info = row.__info || classifyRow(row);
+    const facts = [
+      ["Object", info.isStar ? "Star" : (info.isMoon ? "Moon" : "Planet")],
+      ["Tier", info.tierName.replace("Tier ", "T")],
+      ["Canon", info.isCanon ? "Locked" : "Unmarked"],
+      ["Capital", info.isCapital ? "Yes" : "No"],
+      ["Homeworld", info.isHomeworld ? "Yes" : "No"],
+      ["Conflict", info.isConflict ? "Tagged" : "No"]
+    ];
+    quickFacts.replaceChildren(...facts.map(([k, v]) => {
+      const box = el("div", "fact");
+      box.append(el("div", "factKey", k), el("div", "factVal", v));
+      return box;
+    }));
+  }
+
+  function renderRelated(row) {
+    relatedList.replaceChildren();
+    if (!row) {
+      setEmptyPanel(relatedList, "Select an object to inspect nearby worlds in the same system.");
+      return;
+    }
+    const system = safe(col(row, "System Name"));
+    const rows = ALL
+      .filter((r) => r !== row && safe(col(r, "System Name")) === system)
+      .sort((a, b) => (a.__info?.tier || 3) - (b.__info?.tier || 3))
+      .slice(0, 12);
+    if (!rows.length) {
+      setEmptyPanel(relatedList, "No other mapped objects in this system.");
+      return;
+    }
+    for (const r of rows) {
+      const item = document.createElement("button");
+      item.className = "relatedItem";
+      item.type = "button";
+      item.append(
+        el("div", "relatedName", safe(col(r, "Name"))),
+        el("div", "relatedMeta", `${safe(col(r, "Type"))} | ${r.__info?.tierName || "Tier 3 Background"}`)
+      );
+      item.addEventListener("click", () => {
+        setSelectedById(r.__id);
+        zoomTo(r);
+      });
+      relatedList.appendChild(item);
+    }
   }
 
   function parseCSV(text) {
@@ -730,92 +895,137 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
   let isGlowOn = false;
   let orbitsMode = "selected";
   let clickedPoint = false;
+  let BASE_LABEL_IDS = new Set();
+  const TRACE = {
+    glow: 0,
+    stars: 1,
+    planets: 2,
+    moons: 3,
+    major: 4,
+    restricted: 5,
+    labels: 6,
+    selected: 7
+  };
 
   function syncControlState() {
     btnGrid.classList.toggle("toggled", isGridOn);
     btnGrid.setAttribute("aria-pressed", String(isGridOn));
+    btnGrid.textContent = isGridOn ? "Grid: On" : "Grid: Off";
     btnGlow.classList.toggle("toggled", isGlowOn);
     btnGlow.setAttribute("aria-pressed", String(isGlowOn));
+    btnGlow.textContent = isGlowOn ? "Glow: On" : "Glow: Off";
     btnOrbits.classList.toggle("toggled", orbitsMode === "selected");
     btnOrbits.setAttribute("aria-pressed", String(orbitsMode === "selected"));
-    btnOrbits.textContent = orbitsMode === "selected" ? "Orbits: Selected" : "Orbits: Off";
+    btnOrbits.textContent = orbitsMode === "selected" ? "Orbits: On" : "Orbits: Off";
+  }
+
+  function pushPoint(bucket, row) {
+    const x = Number.isFinite(row.__x) ? row.__x : num(col(row, "X"));
+    const y = Number.isFinite(row.__y) ? row.__y : num(col(row, "Y"));
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const marker = markerFor(row);
+    bucket.x.push(x);
+    bucket.y.push(y);
+    bucket.ids.push(row.__id);
+    bucket.text.push(hoverText(row));
+    bucket.color.push(marker.color);
+    bucket.size.push(marker.size);
+    bucket.symbol.push(marker.symbol);
+    bucket.opacity.push(marker.opacity);
+    bucket.lineColor.push(marker.line.color);
+    bucket.lineWidth.push(marker.line.width);
+  }
+
+  function makeBucket() {
+    return { x: [], y: [], ids: [], text: [], color: [], size: [], symbol: [], opacity: [], lineColor: [], lineWidth: [] };
+  }
+
+  function markerTrace(name, bucket) {
+    return {
+      type: "scattergl",
+      mode: "markers",
+      name,
+      x: bucket.x,
+      y: bucket.y,
+      customdata: bucket.ids,
+      hovertemplate: "%{text}<extra></extra>",
+      text: bucket.text,
+      marker: {
+        size: bucket.size,
+        color: bucket.color,
+        symbol: bucket.symbol,
+        opacity: bucket.opacity,
+        line: { color: bucket.lineColor, width: bucket.lineWidth }
+      }
+    };
   }
 
   function buildTraces() {
-    const xs = [];
-    const ys = [];
-    const colors = [];
-    const sizes = [];
-    const symbols = [];
-    const ids = [];
+    const buckets = {
+      stars: makeBucket(),
+      planets: makeBucket(),
+      moons: makeBucket(),
+      major: makeBucket(),
+      restricted: makeBucket()
+    };
+    const labelX = [];
+    const labelY = [];
+    const labelText = [];
+    const labelIds = [];
+    const glowX = [];
+    const glowY = [];
+    const glowSize = [];
+    const glowColor = [];
 
+    BASE_LABEL_IDS = new Set();
     for (let i=0;i<ALL.length;i++) {
       const r = ALL[i];
       const x = Number.isFinite(r.__x) ? r.__x : num(col(r, "X"));
       const y = Number.isFinite(r.__y) ? r.__y : num(col(r, "Y"));
       if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      const info = r.__info || classifyRow(r);
+      pushPoint(buckets[info.group] || buckets.planets, r);
 
-      const name = safe(col(r, "Name"));
-      const system = safe(col(r, "System Name"));
-      const type = safe(col(r, "Type"));
-
-      const key = `${system}|${name}|${type}`;
-      const color = hueColor(key);
-      const typeLower = type.toLowerCase();
-
-      xs.push(x);
-      ys.push(y);
-      colors.push(color);
-      ids.push(r.__id);
-
-      if (typeLower.includes("moon")) {
-        sizes.push(6);
-        symbols.push("circle-open");
-      } else if (typeLower.includes("planet")) {
-        sizes.push(9);
-        symbols.push("diamond");
-      } else {
-        sizes.push(12);
-        symbols.push("circle");
+      if (info.tier === 1 && labelText.length < 60) {
+        labelX.push(x);
+        labelY.push(y);
+        labelText.push(safe(col(r, "Name")));
+        labelIds.push(r.__id);
+        BASE_LABEL_IDS.add(r.__id);
       }
-
+      if (info.tier <= 2) {
+        const marker = markerFor(r);
+        glowX.push(x);
+        glowY.push(y);
+        glowSize.push(marker.size * (info.tier === 1 ? 2.6 : 2.1));
+        glowColor.push(marker.color);
+      }
     }
 
     const glowTrace = {
       type: "scattergl",
       mode: "markers",
-      x: xs,
-      y: ys,
+      x: glowX,
+      y: glowY,
       hoverinfo: "skip",
       visible: isGlowOn,
       marker: {
-        size: sizes.map(s => s * 2.2),
-        color: colors,
-        opacity: 0.18
+        size: glowSize,
+        color: glowColor,
+        opacity: 0.16
       }
     };
 
-    const mainTrace = {
-      type: "scattergl",
-      mode: "markers",
-      x: xs,
-      y: ys,
-      customdata: ids,
-      marker: {
-        size: sizes,
-        color: colors,
-        symbol: symbols,
-        line: { color: "rgba(255,255,255,0.35)", width: 1 }
-      },
-      hovertemplate: "%{text}<extra></extra>",
-      text: ids.map((id) => {
-        const r = BY_ID.get(id);
-        const name = safe(col(r, "Name"));
-        const system = safe(col(r, "System Name"));
-        const type = safe(col(r, "Type"));
-        const cls = safe(col(r, "Classification"));
-        return `${name} | ${type} | ${system} | ${cls}`;
-      })
+    const labelsTrace = {
+      type: "scatter",
+      mode: "text",
+      x: labelX,
+      y: labelY,
+      customdata: labelIds,
+      hoverinfo: "skip",
+      text: labelText,
+      textposition: "top center",
+      textfont: { color: "rgba(231,238,249,0.72)", size: 10 }
     };
 
     const selectTrace = {
@@ -825,14 +1035,52 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
       y: [],
       hoverinfo: "skip",
       marker: {
-        size: 18,
+        size: 24,
         color: "rgba(0,0,0,0)",
         symbol: "circle-open",
-        line: { color: "rgba(124,195,255,0.9)", width: 2 }
+        line: { color: "rgba(255,209,102,0.96)", width: 3 }
       }
     };
 
-    return [glowTrace, mainTrace, selectTrace];
+    return [
+      glowTrace,
+      markerTrace("Stars", buckets.stars),
+      markerTrace("Planets", buckets.planets),
+      markerTrace("Moons", buckets.moons),
+      markerTrace("Core worlds", buckets.major),
+      markerTrace("Restricted", buckets.restricted),
+      labelsTrace,
+      selectTrace
+    ];
+  }
+
+  function labelPayload(selectedRow) {
+    const rows = ALL.filter((r) => BASE_LABEL_IDS.has(r.__id)).slice(0, 60);
+    if (selectedRow && !BASE_LABEL_IDS.has(selectedRow.__id)) rows.push(selectedRow);
+    const x = [];
+    const y = [];
+    const text = [];
+    const ids = [];
+    for (const row of rows) {
+      const px = Number.isFinite(row.__x) ? row.__x : num(col(row, "X"));
+      const py = Number.isFinite(row.__y) ? row.__y : num(col(row, "Y"));
+      if (!Number.isFinite(px) || !Number.isFinite(py)) continue;
+      x.push(px);
+      y.push(py);
+      text.push(safe(col(row, "Name")));
+      ids.push(row.__id);
+    }
+    return { x, y, text, ids };
+  }
+
+  function updateMapLabels(selectedRow) {
+    const labels = labelPayload(selectedRow);
+    Plotly.restyle(plotEl, {
+      x: [labels.x],
+      y: [labels.y],
+      text: [labels.text],
+      customdata: [labels.ids]
+    }, [TRACE.labels]);
   }
 
   function baseLayout() {
@@ -885,7 +1133,8 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
   function setSelectedById(id) {
     selectedId = id;
     if (!id) {
-      Plotly.restyle(plotEl, { x: [[]], y: [[]] }, [2]);
+      Plotly.restyle(plotEl, { x: [[]], y: [[]] }, [TRACE.selected]);
+      updateMapLabels(null);
       renderDetails(null);
       updateOrbitRings(null);
       return;
@@ -899,8 +1148,9 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     const x = Number.isFinite(row.__x) ? row.__x : num(col(row, "X"));
     const y = Number.isFinite(row.__y) ? row.__y : num(col(row, "Y"));
     if (Number.isFinite(x) && Number.isFinite(y)) {
-      Plotly.restyle(plotEl, { x: [[x]], y: [[y]] }, [2]);
+      Plotly.restyle(plotEl, { x: [[x]], y: [[y]] }, [TRACE.selected]);
     }
+    updateMapLabels(row);
     renderDetails(row);
     updateOrbitRings(row);
   }
@@ -951,7 +1201,8 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     updateFindList("");
     renderDetails(null);
     updateOrbitRings(null);
-    Plotly.restyle(plotEl, { x: [[]], y: [[]] }, [2]);
+    updateMapLabels(null);
+    Plotly.restyle(plotEl, { x: [[]], y: [[]] }, [TRACE.selected]);
     Plotly.relayout(plotEl, {
       "xaxis.autorange": true,
       "yaxis.autorange": true,
@@ -966,6 +1217,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
       if (!ev.points || !ev.points.length) return;
       clickedPoint = true;
       const id = ev.points[0].customdata;
+      if (!id) return;
       setSelectedById(id);
     });
 
@@ -993,7 +1245,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     btnGlow.addEventListener("click", () => {
       isGlowOn = !isGlowOn;
       syncControlState();
-      Plotly.restyle(plotEl, { visible: isGlowOn }, [0]);
+      Plotly.restyle(plotEl, { visible: isGlowOn }, [TRACE.glow]);
     });
 
     btnOrbits.addEventListener("click", () => {
@@ -1030,6 +1282,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
       for (let i=0;i<ALL.length;i++) {
         const r = ALL[i];
         r.__id = `${safe(col(r, "System Name"))}|${safe(col(r, "Name"))}|${safe(col(r, "Type"))}|${i}`;
+        r.__info = classifyRow(r);
         BY_ID.set(r.__id, r);
       }
 
@@ -1042,7 +1295,8 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
         scrollZoom: true
       });
 
-      pill.textContent = "Ready";
+      const hasCanon = ALL.some((row) => safe(col(row, "Canon_Status")) !== "Unknown");
+      pill.textContent = hasCanon ? "Book 1 Synced" : "Atlas Online";
       hookEvents();
       syncControlState();
       updateFindList("");
