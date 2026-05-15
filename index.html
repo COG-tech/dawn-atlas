@@ -1165,23 +1165,25 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
   function matchesLegendFilter(row) {
     if (!activeLegendFilter) return true;
     const info = row.__info || classifyRow(row);
+    const objectType = safe(col(row, "Object_Type")).toUpperCase();
+    const visualClass = safe(col(row, "Visual_Class")).toUpperCase();
     switch (activeLegendFilter) {
       case "stars":
-        return info.isStar && !info.isBlackHole && !info.isWormhole && !info.isRift && !info.isPulsar && !info.isMagnetar && !info.isDyson;
+        return (objectType === "STAR" || info.isStar) && !info.isBlackHole && !info.isWormhole && !info.isRift && !info.isPulsar && !info.isMagnetar && !info.isDyson;
       case "planets":
-        return info.isPlanet && !info.isConflict && !info.isRift && !info.isDyson && info.visualClass === "PLANET";
+        return (objectType === "PLANET" || info.isPlanet) && !info.isConflict && !info.isRift && !info.isDyson && visualClass !== "CONFLICT_WORLD" && visualClass !== "RIFT_WORLD" && visualClass !== "DYSON_LINKED_WORLD";
       case "moons":
-        return info.isMoon;
+        return objectType === "MOON" || info.isMoon;
       case "blackholes":
-        return info.isBlackHole || info.visualClass === "BLACK_HOLE";
+        return flag(col(row, "Is_Black_Hole")) || visualClass === "BLACK_HOLE" || info.isBlackHole;
       case "wormholes":
-        return info.isWormhole || info.isRift || info.visualClass === "WORMHOLE_STAR" || info.visualClass === "RIFT_WORLD";
+        return flag(col(row, "Is_Wormhole")) || flag(col(row, "Is_Rift")) || visualClass === "WORMHOLE_STAR" || visualClass === "RIFT_WORLD" || info.isWormhole || info.isRift;
       case "core":
-        return info.tier === 1 || info.isHomeworld || info.isCanon;
+        return safe(col(row, "Story_Tier")).toLowerCase() === "core" || info.tier === 1 || info.isHomeworld || info.isCanon;
       case "capital":
         return info.isCapital || info.isCanon;
       case "conflict":
-        return info.isConflict || info.visualClass === "CONFLICT_WORLD";
+        return flag(col(row, "Is_Conflict_Zone")) || visualClass === "CONFLICT_WORLD" || info.isConflict;
       case "mystery":
         return info.isMystery || safe(col(row, "Story_Tier")).toLowerCase() === "mystery";
       default:
@@ -1363,7 +1365,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
         updateOrbitRings(null);
       }
     }
-    await Plotly.react(plotEl, buildTraces(), plotEl.layout, PLOT_CONFIG);
+    await Plotly.react(plotEl, buildTraces(), baseLayout(), PLOT_CONFIG);
     if (selectedId) setSelectedById(selectedId, { zoom: false });
     else updateMapLabels(null);
   }
