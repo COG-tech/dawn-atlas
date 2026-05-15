@@ -313,6 +313,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
   function classifyRow(row) {
     const type = safe(col(row, "Type"));
     const typeLower = type.toLowerCase();
+    const objectType = safe(col(row, "Object_Type")).toUpperCase();
     const bag = textBag(row);
     const canon = safe(col(row, "Canon_Status"));
     const canonName = raw(col(row, "Canon_Name"));
@@ -320,9 +321,9 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     const book1Star = raw(col(row, "Book1_Canon_Star_Name"));
     const book1Planets = raw(col(row, "Book1_Canon_Planet_Codes"));
     const canonText = `${canon} ${canonName} ${canonSource} ${book1Star} ${book1Planets}`.toLowerCase();
-    const isStar = typeLower.includes("star");
-    const isPlanet = typeLower.includes("planet");
-    const isMoon = typeLower.includes("moon");
+    const isStar = objectType === "STAR" || typeLower.includes("star");
+    const isPlanet = objectType === "PLANET" || typeLower.includes("planet");
+    const isMoon = objectType === "MOON" || flag(col(row, "Is_Actual_Moon")) || typeLower.includes("moon");
     const isCanon = canonName.length > 0;
     const isBook1 = isCanon && /book\s*1|book1|locked/.test(canonText);
     const isExpansion = isCanon && /post|later|expansion|series/.test(canonText) && !isBook1;
@@ -456,6 +457,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
       NEXUS_WORLD: "Nexus World",
       SACRED_WORLD: "Sacred World",
       OCEAN_WORLD: "Ocean World",
+      MIRAGE_MOON: "Mirage Moon",
       RED_GIANT: "Red Giant",
       WHITE_DWARF: "White Dwarf",
       NEUTRON_STAR: "Neutron Star",
