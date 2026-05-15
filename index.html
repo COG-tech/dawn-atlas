@@ -202,7 +202,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
   const CSV_URL = "./dawn_atlas.csv";
 
   const BG = "#060A12";
-  const GRID_ON = "rgba(160,190,225,0.18)";
+  const GRID_ON = "rgba(160,190,225,0.12)";
   const GRID_OFF = "rgba(150,170,210,0.00)";
   const AXIS = "rgba(231,238,249,0.24)";
   const ORBIT_SCALE = 2.2;
@@ -372,44 +372,57 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     return fallback;
   }
 
+  function markerPriority(row) {
+    const p = num(col(row, "Label_Priority"));
+    return Number.isFinite(p) ? p : 4;
+  }
+
+  function tierOpacity(row, info) {
+    const priority = markerPriority(row);
+    if (info.tier === 1 || priority <= 1) return 0.96;
+    if (info.tier === 2 || priority === 2) return 0.68;
+    if (info.isMystery || priority === 3) return 0.48;
+    return 0.28;
+  }
+
   function markerFor(row) {
     const info = row.__info || classifyRow(row);
     const csvColor = raw(col(row, "Marker_Color"));
     const csvSize = num(col(row, "Marker_Size"));
-    const csvOpacity = num(col(row, "Marker_Opacity"));
     const csvShape = raw(col(row, "Marker_Shape"));
+    const baseOpacity = tierOpacity(row, info);
     if (info.visualClass === "BLACK_HOLE") {
-      return { color: csvColor || "#050509", size: csvSize || 16, symbol: markerSymbol(csvShape, "circle-open"), opacity: csvOpacity || 0.92, line: { color: "rgba(245,196,98,0.95)", width: 3 } };
+      return { color: "#050509", size: Math.max(csvSize || 0, 16), symbol: markerSymbol(csvShape, "circle-open"), opacity: Math.max(baseOpacity, 0.82), line: { color: "rgba(247,201,72,0.98)", width: 4 } };
     }
     if (info.visualClass === "WORMHOLE_STAR" || info.visualClass === "RIFT_WORLD") {
-      return { color: csvColor || "#A78BFA", size: csvSize || 14, symbol: markerSymbol(csvShape, "circle-open-dot"), opacity: csvOpacity || 0.82, line: { color: "rgba(34,211,238,0.8)", width: 2 } };
+      return { color: "#7C3AED", size: Math.max(csvSize || 0, 14), symbol: markerSymbol(csvShape, "circle-open-dot"), opacity: Math.max(baseOpacity, 0.72), line: { color: "rgba(34,211,238,0.92)", width: 3 } };
     }
     if (info.visualClass === "MAGNETAR") {
-      return { color: csvColor || "#22D3EE", size: csvSize || 13, symbol: markerSymbol(csvShape, "cross"), opacity: csvOpacity || 0.9, line: { color: "rgba(255,255,255,0.75)", width: 1.5 } };
+      return { color: "#22D3EE", size: Math.max(csvSize || 0, 12), symbol: markerSymbol(csvShape, "cross"), opacity: Math.max(baseOpacity, 0.62), line: { color: "rgba(231,238,249,0.76)", width: 1.7 } };
     }
     if (info.visualClass === "PULSAR") {
-      return { color: csvColor || "#60A5FA", size: csvSize || 12, symbol: markerSymbol(csvShape, "x"), opacity: csvOpacity || 0.88, line: { color: "rgba(255,255,255,0.74)", width: 1.4 } };
+      return { color: "#8BD3FF", size: Math.max(csvSize || 0, 11), symbol: markerSymbol(csvShape, "x"), opacity: Math.max(baseOpacity, 0.62), line: { color: "rgba(231,238,249,0.7)", width: 1.5 } };
     }
     if (info.visualClass === "DYSON_STAR" || info.visualClass === "DYSON_LINKED_WORLD") {
-      return { color: csvColor || "#F7C948", size: csvSize || 14, symbol: markerSymbol(csvShape, "circle-open"), opacity: csvOpacity || 0.92, line: { color: "rgba(247,201,72,0.95)", width: 2.4 } };
+      return { color: "#EAB308", size: Math.max(csvSize || 0, 12), symbol: markerSymbol(csvShape, "circle-open"), opacity: Math.max(baseOpacity, 0.58), line: { color: "rgba(247,201,72,0.9)", width: 2.4 } };
     }
     if (info.group === "restricted") {
-      return { color: "#FF5C7A", size: info.tier === 1 ? 15 : 12, symbol: "circle-open-dot", opacity: 0.82, line: { color: "rgba(255,92,122,0.95)", width: 2 } };
+      return { color: "#EF4444", size: info.tier === 1 ? 15 : 12, symbol: "circle-open-dot", opacity: Math.max(baseOpacity, 0.68), line: { color: "rgba(255,92,122,0.95)", width: 2.4 } };
     }
     if (info.group === "major") {
       const color = info.isCapital || info.isCanon ? "#FFD166" : "#7CC3FF";
       return { color, size: info.isStar ? 15 : 13, symbol: info.isPlanet ? "diamond" : "circle", opacity: 0.95, line: { color: "rgba(255,255,255,0.82)", width: 1.5 } };
     }
     if (info.isMystery) {
-      return { color: "#B58CFF", size: 9, symbol: "circle", opacity: 0.55, line: { color: "rgba(181,140,255,0.55)", width: 1 } };
+      return { color: csvColor || "#8B5CF6", size: Math.min(csvSize || 9, 10), symbol: markerSymbol(csvShape, "circle"), opacity: baseOpacity, line: { color: "rgba(181,140,255,0.42)", width: 1 } };
     }
     if (info.isMoon) {
-      return { color: "#91A4BC", size: 5, symbol: "circle-open", opacity: 0.45, line: { color: "rgba(145,164,188,0.42)", width: 1 } };
+      return { color: "#91A4BC", size: 5, symbol: "circle-open", opacity: Math.min(baseOpacity, 0.42), line: { color: "rgba(145,164,188,0.42)", width: 1 } };
     }
     if (info.isPlanet) {
-      return { color: "#6FCBFF", size: 7, symbol: "diamond", opacity: 0.56, line: { color: "rgba(111,203,255,0.34)", width: 1 } };
+      return { color: "#5BA8C8", size: Math.min(csvSize || 7, 9), symbol: "diamond", opacity: baseOpacity, line: { color: "rgba(111,203,255,0.28)", width: 1 } };
     }
-    return { color: "#F6D68A", size: 8, symbol: "circle", opacity: 0.52, line: { color: "rgba(246,214,138,0.34)", width: 1 } };
+    return { color: csvColor || "#F6D68A", size: Math.min(csvSize || 8, 10), symbol: "circle", opacity: baseOpacity, line: { color: "rgba(246,214,138,0.32)", width: 1 } };
   }
 
   function visualClassLabel(info) {
@@ -1197,14 +1210,14 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
       const info = r.__info || classifyRow(r);
       pushPoint(buckets[info.group] || buckets.planets, r);
 
-      if (info.tier === 1 && labelText.length < 20) {
+      if (markerPriority(r) <= 1 && labelText.length < 12) {
         labelX.push(x);
         labelY.push(y);
         labelText.push(safe(col(r, "Name")));
         labelIds.push(r.__id);
         BASE_LABEL_IDS.add(r.__id);
       }
-      if (info.tier <= 2) {
+      if (info.tier <= 2 || markerPriority(r) <= 2 || info.isBlackHole || info.isWormhole || info.isRift) {
         const marker = markerFor(r);
         glowX.push(x);
         glowY.push(y);
@@ -1235,8 +1248,8 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
       customdata: labelIds,
       hoverinfo: "skip",
       text: labelText,
-      textposition: "top center",
-      textfont: { color: "rgba(231,238,249,0.72)", size: 10 }
+      textposition: "middle right",
+      textfont: { color: "rgba(231,238,249,0.62)", size: 9 }
     };
 
     const selectTrace = {
@@ -1266,7 +1279,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
   }
 
   function labelPayload(selectedRow) {
-    const rows = ALL.filter((r) => BASE_LABEL_IDS.has(r.__id)).slice(0, 20);
+    const rows = ALL.filter((r) => BASE_LABEL_IDS.has(r.__id)).slice(0, 12);
     if (selectedRow && !BASE_LABEL_IDS.has(selectedRow.__id)) rows.push(selectedRow);
     const x = [];
     const y = [];
