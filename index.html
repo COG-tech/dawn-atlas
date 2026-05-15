@@ -123,7 +123,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
 
       <div id="controls" aria-label="Map controls">
         <button id="btnOrbits" class="btn toggled" type="button" aria-pressed="true" title="Show orbit rings for the selected system">Orbits: Selected</button>
-        <button id="btnGlow" class="btn" type="button" aria-pressed="false" title="Add a soft glow layer to stars">Star glow</button>
+        <button id="btnGlow" class="btn" type="button" aria-pressed="false" title="Toggle atlas effects and halo emphasis">Effects</button>
         <button id="btnGrid" class="btn toggled" type="button" aria-pressed="true" title="Toggle the grid">Grid</button>
         <button id="btnReset" class="btn" type="button" title="Reset view and clear selection">Reset</button>
       </div>
@@ -230,6 +230,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
 
   const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
   const safe = (v) => (v === undefined || v === null || String(v).trim() === "" || String(v).trim() === "-") ? "Unknown" : String(v);
+  const raw = (v) => (v === undefined || v === null || String(v).trim() === "-" || String(v).trim() === "Unknown") ? "" : String(v).trim();
   const num = (v) => {
     const x = Number(v);
     return Number.isFinite(x) ? x : null;
@@ -293,14 +294,31 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     const typeLower = type.toLowerCase();
     const bag = textBag(row);
     const canon = safe(col(row, "Canon_Status"));
+    const canonName = raw(col(row, "Canon_Name"));
+    const canonSource = raw(col(row, "Canon_Source"));
+    const book1Star = raw(col(row, "Book1_Canon_Star_Name"));
+    const book1Planets = raw(col(row, "Book1_Canon_Planet_Codes"));
+    const canonText = `${canon} ${canonName} ${canonSource} ${book1Star} ${book1Planets}`.toLowerCase();
     const isStar = typeLower.includes("star");
     const isPlanet = typeLower.includes("planet");
     const isMoon = typeLower.includes("moon");
-    const isCanon = /book1|canon|locked|verified|fixed/.test(`${canon} ${bag}`);
+    const isCanon = canonName.length > 0;
+    const isBook1 = isCanon && /book\s*1|book1|locked/.test(canonText);
+    const isExpansion = isCanon && /post|later|expansion|series/.test(canonText) && !isBook1;
     const isCapital = /capital/.test(bag);
     const isHomeworld = /homeworld/.test(bag);
     const isConflict = /conflict|restricted|war|forbidden/.test(bag);
-    const isMystery = /unknown|unexplored|mystery|hidden|nihility/.test(bag);
+    const isMystery = !isCanon && /unknown|unexplored|mystery|hidden|nihility/.test(bag);
+    const isBlackHole = /black\s*hole/.test(bag);
+    const isWormhole = /wormhole/.test(bag);
+    const isPulsar = /pulsar/.test(bag);
+    const isMagnetar = /magnetar|\bmg\b/.test(bag);
+    const isDyson = /dyson/.test(bag);
+    const isRift = /rift/.test(bag);
+    const isChronos = /chronos|time/.test(bag);
+    const isMirage = /mirage/.test(bag);
+    const isSacred = /sacred|ritual/.test(bag);
+    const isOcean = /ocean|water/.test(bag);
     let tier = 3;
     let tierName = "Tier 3 Background";
     if (isMystery) {
@@ -315,12 +333,43 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
       tier = 1;
       tierName = "Tier 1 Core Canon";
     }
+    let visualClass = isStar ? "STAR" : (isMoon ? "MOON" : "PLANET");
+    if (isBlackHole) visualClass = "BLACK_HOLE";
+    else if (isWormhole) visualClass = "WORMHOLE_STAR";
+    else if (isPulsar) visualClass = "PULSAR";
+    else if (isMagnetar) visualClass = "MAGNETAR";
+    else if (isDyson && isStar) visualClass = "DYSON_STAR";
+    else if (isConflict) visualClass = "CONFLICT_WORLD";
+    else if (/gravity/.test(bag)) visualClass = "GRAVITY_ANOMALY_WORLD";
+    else if (isDyson) visualClass = "DYSON_LINKED_WORLD";
+    else if (isRift) visualClass = "RIFT_WORLD";
+    else if (isChronos) visualClass = "CHRONOS_WORLD";
+    else if (isMirage) visualClass = "MIRAGE_WORLD";
+    else if (isCapital || /nexus|power/.test(bag)) visualClass = "NEXUS_WORLD";
+    else if (isSacred) visualClass = "SACRED_WORLD";
+    else if (isOcean && isPlanet) visualClass = "OCEAN_WORLD";
+    const canonLabel = isBook1 ? "Book 1 Locked" : (isExpansion ? "Post-Book 1 Expansion" : (isCanon ? "Canon Locked" : "Unverified"));
     const group = isConflict ? "restricted" : (tier === 1 ? "major" : (isMoon ? "moon" : (isStar ? "star" : "planet")));
-    return { type, isStar, isPlanet, isMoon, isCanon, isCapital, isHomeworld, isConflict, isMystery, tier, tierName, group };
+    return { type, isStar, isPlanet, isMoon, isCanon, isBook1, isExpansion, canonLabel, isCapital, isHomeworld, isConflict, isMystery, isBlackHole, isWormhole, isPulsar, isMagnetar, isDyson, isRift, tier, tierName, visualClass, group };
   }
 
   function markerFor(row) {
     const info = row.__info || classifyRow(row);
+    if (info.visualClass === "BLACK_HOLE") {
+      return { color: "#0A0A0F", size: 16, symbol: "circle-open", opacity: 0.92, line: { color: "rgba(245,196,98,0.95)", width: 3 } };
+    }
+    if (info.visualClass === "WORMHOLE_STAR" || info.visualClass === "RIFT_WORLD") {
+      return { color: "#8B5CF6", size: 14, symbol: "circle-open-dot", opacity: 0.82, line: { color: "rgba(34,211,238,0.8)", width: 2 } };
+    }
+    if (info.visualClass === "MAGNETAR") {
+      return { color: "#22D3EE", size: 13, symbol: "cross", opacity: 0.9, line: { color: "rgba(255,255,255,0.75)", width: 1.5 } };
+    }
+    if (info.visualClass === "PULSAR") {
+      return { color: "#60A5FA", size: 12, symbol: "x", opacity: 0.88, line: { color: "rgba(255,255,255,0.74)", width: 1.4 } };
+    }
+    if (info.visualClass === "DYSON_STAR" || info.visualClass === "DYSON_LINKED_WORLD") {
+      return { color: "#F7C948", size: 14, symbol: "circle-open", opacity: 0.92, line: { color: "rgba(247,201,72,0.95)", width: 2.4 } };
+    }
     if (info.group === "restricted") {
       return { color: "#FF5C7A", size: info.tier === 1 ? 15 : 12, symbol: "circle-open-dot", opacity: 0.82, line: { color: "rgba(255,92,122,0.95)", width: 2 } };
     }
@@ -340,6 +389,63 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     return { color: "#F6D68A", size: 8, symbol: "circle", opacity: 0.52, line: { color: "rgba(246,214,138,0.34)", width: 1 } };
   }
 
+  function visualClassLabel(info) {
+    const labels = {
+      BLACK_HOLE: "Black Hole",
+      WORMHOLE_STAR: "Wormhole Star",
+      PULSAR: "Pulsar",
+      MAGNETAR: "Magnetar Star",
+      DYSON_STAR: "Dyson Star",
+      CONFLICT_WORLD: "Conflict World",
+      GRAVITY_ANOMALY_WORLD: "Gravity Anomaly",
+      DYSON_LINKED_WORLD: "Dyson-Linked World",
+      RIFT_WORLD: "Rift World",
+      CHRONOS_WORLD: "Chronos World",
+      MIRAGE_WORLD: "Mirage World",
+      NEXUS_WORLD: "Nexus World",
+      SACRED_WORLD: "Sacred World",
+      OCEAN_WORLD: "Ocean World",
+      MOON: "Moon",
+      PLANET: "Planet",
+      STAR: "Star"
+    };
+    return labels[info.visualClass] || info.visualClass || "Unknown";
+  }
+
+  function threatLevel(info) {
+    if (info.isBlackHole || info.isWormhole || info.isMagnetar || info.isRift || info.isConflict) return "High";
+    if (info.isPulsar || info.isDyson || info.tier <= 2) return "Elevated";
+    if (info.isMystery) return "Unknown";
+    return "Low";
+  }
+
+  function storyFunction(info) {
+    if (info.isBlackHole) return "Gravity hazard";
+    if (info.isWormhole || info.isRift) return "Rift / route anomaly";
+    if (info.isMagnetar) return "Navigation hazard";
+    if (info.isPulsar) return "Beacon hazard";
+    if (info.isDyson) return "Megastructure node";
+    if (info.isConflict) return "Conflict node";
+    if (info.isCapital) return "Political center";
+    if (info.isHomeworld) return "Origin world";
+    if (info.isCanon) return "Canon reference";
+    if (info.isMystery) return "Unexplored lead";
+    return "Atlas support";
+  }
+
+  function storyRole(row, info) {
+    const system = safe(col(row, "System Name"));
+    const cls = safe(col(row, "Classification"));
+    if (info.isMagnetar) return `${visualClassLabel(info)} in ${system}; unstable navigation and scanner distortion risk.`;
+    if (info.isBlackHole) return `Black-hole gravity node in ${system}; high-risk transit and lensing reference.`;
+    if (info.isWormhole || info.isRift) return `Route anomaly in ${system}; useful for rift, lane, or unstable travel logic.`;
+    if (info.isConflict) return `Strategic conflict marker in ${system}; flagged for war, restriction, or extraction pressure.`;
+    if (info.isCapital) return `Political power center in ${system}; high-priority atlas reference.`;
+    if (info.isHomeworld) return `Homeworld reference in ${system}; identity and origin anchor.`;
+    if (info.isCanon) return `Canon reference in ${system}; locked to the current story atlas.`;
+    return `${safe(col(row, "Type"))} in ${system}; ${cls} atlas support row pending canon confirmation.`;
+  }
+
   function hoverText(row) {
     return `${safe(col(row, "Name"))} | ${safe(col(row, "Type"))} | ${safe(col(row, "System Name"))} | ${safe(col(row, "Classification"))}`;
   }
@@ -349,7 +455,8 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     texture: null,
     phase: 0,
     speed: 0.00006,
-    type: "planet"
+    type: "planet",
+    info: null
   };
   let previewAnimId = null;
   let previewLast = 0;
@@ -408,7 +515,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     return canvas;
   }
 
-  function setPreviewTarget(key, type) {
+  function setPreviewTarget(key, type, info) {
     const k = String(key || "Unknown");
     if (previewState.key !== k || !previewState.texture) {
       previewState.key = k;
@@ -416,6 +523,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
       previewState.phase = 0;
     }
     previewState.type = String(type || "");
+    previewState.info = info || null;
     previewState.speed = previewState.type.toLowerCase().includes("star") ? 0.00002 : 0.00006;
     if (reducedMotionQuery && reducedMotionQuery.matches) {
       drawPlanetFrame();
@@ -437,6 +545,11 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
 
     const tex = previewState.texture;
     if (!tex) return;
+
+    if (previewState.info?.isStar) {
+      drawStarPreview(cx, cy, r);
+      return;
+    }
 
     pctx.save();
     pctx.beginPath();
@@ -481,6 +594,74 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     pctx.stroke();
   }
 
+  function drawStarPreview(cx, cy, r) {
+    const info = previewState.info || {};
+    const isMagnetar = info.visualClass === "MAGNETAR";
+    const isPulsar = info.visualClass === "PULSAR";
+    const isBlackHole = info.visualClass === "BLACK_HOLE";
+    const coreColor = isMagnetar ? "rgba(168,245,255,1)" : (isPulsar ? "rgba(220,242,255,1)" : "rgba(255,238,180,1)");
+    const coronaColor = isMagnetar ? "rgba(34,211,238,.55)" : (isPulsar ? "rgba(96,165,250,.45)" : "rgba(255,180,70,.42)");
+    if (isBlackHole) {
+      const lens = pctx.createRadialGradient(cx, cy, r * 0.25, cx, cy, r * 1.25);
+      lens.addColorStop(0, "rgba(0,0,0,1)");
+      lens.addColorStop(0.38, "rgba(0,0,0,1)");
+      lens.addColorStop(0.48, "rgba(247,201,72,.86)");
+      lens.addColorStop(0.7, "rgba(139,92,246,.32)");
+      lens.addColorStop(1, "rgba(0,0,0,0)");
+      pctx.fillStyle = lens;
+      pctx.beginPath();
+      pctx.arc(cx, cy, r * 1.2, 0, Math.PI * 2);
+      pctx.fill();
+      return;
+    }
+
+    const halo = pctx.createRadialGradient(cx, cy, r * 0.05, cx, cy, r * 1.45);
+    halo.addColorStop(0, coreColor);
+    halo.addColorStop(0.35, coronaColor);
+    halo.addColorStop(0.72, isMagnetar ? "rgba(239,68,68,.22)" : "rgba(255,209,102,.16)");
+    halo.addColorStop(1, "rgba(0,0,0,0)");
+    pctx.fillStyle = halo;
+    pctx.beginPath();
+    pctx.arc(cx, cy, r * 1.45, 0, Math.PI * 2);
+    pctx.fill();
+
+    pctx.fillStyle = coreColor;
+    pctx.beginPath();
+    pctx.arc(cx, cy, r * 0.58, 0, Math.PI * 2);
+    pctx.fill();
+
+    const flareCount = isMagnetar ? 9 : 5;
+    pctx.save();
+    pctx.translate(cx, cy);
+    pctx.rotate(previewState.phase * Math.PI * 2);
+    for (let i=0;i<flareCount;i++) {
+      const a = (Math.PI * 2 * i) / flareCount;
+      const len = r * (isMagnetar ? 0.95 : 0.65);
+      pctx.strokeStyle = isMagnetar ? "rgba(34,211,238,.68)" : "rgba(255,221,147,.44)";
+      pctx.lineWidth = isMagnetar ? 1.5 : 1;
+      pctx.beginPath();
+      pctx.moveTo(Math.cos(a) * r * 0.48, Math.sin(a) * r * 0.48);
+      pctx.lineTo(Math.cos(a + Math.sin(i) * 0.12) * len, Math.sin(a + Math.cos(i) * 0.12) * len);
+      pctx.stroke();
+    }
+    pctx.restore();
+
+    if (isPulsar) {
+      pctx.strokeStyle = "rgba(96,165,250,.8)";
+      pctx.lineWidth = 2;
+      pctx.beginPath();
+      pctx.moveTo(cx - r * 1.2, cy + r * 0.35);
+      pctx.lineTo(cx + r * 1.2, cy - r * 0.35);
+      pctx.stroke();
+    }
+
+    pctx.strokeStyle = isMagnetar ? "rgba(34,211,238,.5)" : "rgba(255,209,102,.32)";
+    pctx.lineWidth = 1.4;
+    pctx.beginPath();
+    pctx.arc(cx, cy, r * 0.82, 0, Math.PI * 2);
+    pctx.stroke();
+  }
+
   function animatePreview(ts) {
     if (reducedMotionQuery && reducedMotionQuery.matches) {
       previewAnimId = null;
@@ -504,10 +685,10 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
       detailsTitle.textContent = "No object selected";
       detailsSub.textContent = "Select a star, planet, or moon.";
       detailsTags.replaceChildren(el("span", "tag", "Atlas Online"), el("span", "tag", "Book 1 Synced"));
-      detailsGrid.replaceChildren(el("div", "emptyState", "Select an object to view system details, canon status, classification, story tier, and related worlds."));
+      detailsGrid.replaceChildren(el("div", "emptyState", "Select an object to view system details, canon status, classification, story role, and related worlds."));
       setEmptyPanel(quickFacts, "No object selected.");
       renderRelated(null);
-      setPreviewTarget("Unknown", "Unknown");
+      setPreviewTarget("Unknown", "Unknown", null);
       return;
     }
     const info = row.__info || classifyRow(row);
@@ -515,7 +696,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     const system = safe(col(row, "System Name"));
     const type = safe(col(row, "Type"));
     const classification = safe(col(row, "Classification"));
-    const canonStatus = safe(col(row, "Canon_Status"));
+    const canonStatus = info.canonLabel;
     const canonName = safe(col(row, "Canon_Name"));
     const x = num(col(row, "X"));
     const y = num(col(row, "Y"));
@@ -527,10 +708,11 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     detailsTitle.textContent = name;
     detailsSub.textContent = `${type} in ${system}`;
     const tags = [info.tierName];
-    if (info.isCanon) tags.push("Canon locked");
+    tags.push(info.canonLabel);
     if (info.isCapital) tags.push("Capital");
     if (info.isHomeworld) tags.push("Homeworld");
     if (info.isConflict) tags.push("Restricted");
+    if (info.visualClass !== "PLANET" && info.visualClass !== "STAR" && info.visualClass !== "MOON") tags.push(visualClassLabel(info));
     detailsTags.replaceChildren(...tags.map((tag) => el("span", "tag", tag)));
 
     const coords = (Number.isFinite(x) && Number.isFinite(y)) ? `${x}, ${y}` : "Unknown";
@@ -544,7 +726,8 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
       ["Canon", canonStatus],
       ["Canon Name", canonName],
       ["Habitability", habitability],
-      ["Story Tier", info.tierName]
+      ["Story Tier", info.tierName],
+      ["Story Role", storyRole(row, info)]
     ];
 
     const nodes = [];
@@ -556,7 +739,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
 
     renderQuickFacts(row);
     renderRelated(row);
-    setPreviewTarget(name + "|" + system, type);
+    setPreviewTarget(name + "|" + system, type, info);
   }
 
   function renderQuickFacts(row) {
@@ -567,10 +750,12 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     const info = row.__info || classifyRow(row);
     const facts = [
       ["Object", info.isStar ? "Star" : (info.isMoon ? "Moon" : "Planet")],
+      ["Visual Class", visualClassLabel(info)],
+      ["Canon", info.canonLabel],
       ["Tier", info.tierName.replace("Tier ", "T")],
-      ["Canon", info.isCanon ? "Locked" : "Unmarked"],
-      ["Capital", info.isCapital ? "Yes" : "No"],
-      ["Homeworld", info.isHomeworld ? "Yes" : "No"],
+      ["Threat", threatLevel(info)],
+      ["Function", storyFunction(info)],
+      ["First Appears", info.isBook1 ? "Book 1 / Atlas" : (info.isCanon ? "Series Atlas" : "Atlas Support")],
       ["Conflict", info.isConflict ? "Tagged" : "No"]
     ];
     quickFacts.replaceChildren(...facts.map(([k, v]) => {
@@ -913,7 +1098,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
     btnGrid.textContent = isGridOn ? "Grid: On" : "Grid: Off";
     btnGlow.classList.toggle("toggled", isGlowOn);
     btnGlow.setAttribute("aria-pressed", String(isGlowOn));
-    btnGlow.textContent = isGlowOn ? "Glow: On" : "Glow: Off";
+    btnGlow.textContent = isGlowOn ? "Effects: On" : "Effects: Off";
     btnOrbits.classList.toggle("toggled", orbitsMode === "selected");
     btnOrbits.setAttribute("aria-pressed", String(orbitsMode === "selected"));
     btnOrbits.textContent = orbitsMode === "selected" ? "Orbits: On" : "Orbits: Off";
@@ -986,7 +1171,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
       const info = r.__info || classifyRow(r);
       pushPoint(buckets[info.group] || buckets.planets, r);
 
-      if (info.tier === 1 && labelText.length < 60) {
+      if (info.tier === 1 && labelText.length < 20) {
         labelX.push(x);
         labelY.push(y);
         labelText.push(safe(col(r, "Name")));
@@ -1055,7 +1240,7 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
   }
 
   function labelPayload(selectedRow) {
-    const rows = ALL.filter((r) => BASE_LABEL_IDS.has(r.__id)).slice(0, 60);
+    const rows = ALL.filter((r) => BASE_LABEL_IDS.has(r.__id)).slice(0, 20);
     if (selectedRow && !BASE_LABEL_IDS.has(selectedRow.__id)) rows.push(selectedRow);
     const x = [];
     const y = [];
@@ -1295,8 +1480,8 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
         scrollZoom: true
       });
 
-      const hasCanon = ALL.some((row) => safe(col(row, "Canon_Status")) !== "Unknown");
-      pill.textContent = hasCanon ? "Book 1 Synced" : "Atlas Online";
+      const hasBook1 = ALL.some((row) => classifyRow(row).isBook1);
+      pill.textContent = hasBook1 ? "Book 1 Locked" : "Atlas Online";
       hookEvents();
       syncControlState();
       updateFindList("");
