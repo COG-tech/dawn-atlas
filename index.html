@@ -55,6 +55,9 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
 .halo{width:12px; height:12px; border-radius:999px; border:2px solid rgba(124,195,255,.85); background:transparent}
 .cap{width:12px; height:12px; border-radius:999px; border:2px solid rgba(255,209,102,.95); background:transparent; position:relative}
 .cap:after{content:""; position:absolute; inset:2px; border:2px solid rgba(255,209,102,.62); border-radius:999px}
+.blackhole{width:14px; height:14px; border-radius:999px; border:2px solid rgba(247,201,72,.95); background:#050509; box-shadow:0 0 12px rgba(139,92,246,.42)}
+.wormhole{width:14px; height:14px; border-radius:999px; border:2px solid rgba(167,139,250,.95); background:radial-gradient(circle, transparent 35%, rgba(34,211,238,.42) 38% 48%, transparent 52%); position:relative; box-shadow:0 0 12px rgba(168,85,247,.35)}
+.wormhole:after{content:""; position:absolute; inset:3px; border-top:2px solid rgba(34,211,238,.9); border-radius:999px; transform:rotate(-28deg)}
 .conf{width:12px; height:12px; border-radius:999px; border:2px dashed rgba(255,92,122,.95); background:transparent}
 .mystery{width:12px; height:12px; border-radius:999px; background:rgba(181,140,255,.72); box-shadow:0 0 12px rgba(181,140,255,.45)}
 #detailsHeader{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;}
@@ -175,6 +178,8 @@ html,body{min-height:100%; margin:0; background: radial-gradient(900px 520px at 
       <div class="legendRow"><div class="dot"></div><div class="small" style="flex:1">Stars</div></div>
       <div class="legendRow"><div class="diamond"></div><div class="small" style="flex:1">Planets</div></div>
       <div class="legendRow"><div class="moon"></div><div class="small" style="flex:1">Moons</div></div>
+      <div class="legendRow"><div class="blackhole"></div><div class="small" style="flex:1">Black holes</div></div>
+      <div class="legendRow"><div class="wormhole"></div><div class="small" style="flex:1">Wormholes / rifts</div></div>
       <div class="legendRow"><div class="halo"></div><div class="small" style="flex:1">Core / homeworld</div></div>
       <div class="legendRow"><div class="cap"></div><div class="small" style="flex:1">Capital / canon locked</div></div>
       <div class="legendRow"><div class="conf"></div><div class="small" style="flex:1">Conflict / restricted</div></div>
